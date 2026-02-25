@@ -18,13 +18,13 @@
 
 ## Table of Contents
 
-1. [Technical Decisions](#technical-decisions)
-2. [Project Structure](#project-structure)
-3. [CI/CD Pipeline](#cicd-pipeline)
-4. [Testing Strategy](#testing-strategy)
-5. [Sprint Breakdown](#sprint-breakdown)
-6. [Milestones & Verification](#milestones--verification)
-7. [Prompt Files](#prompt-files)
+1. [Technical Decisions](#1-technical-decisions)
+2. [Project Structure](#2-project-structure)
+3. [CI/CD Pipeline](#3-cicd-pipeline)
+4. [Testing Strategy](#4-testing-strategy)
+5. [Sprint Breakdown](#5-sprint-breakdown)
+6. [Milestones & Verification](#6-milestones--verification)
+7. [Prompt Files](#7-prompt-files)
 
 ---
 

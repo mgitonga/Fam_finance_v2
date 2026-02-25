@@ -10,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 1. HOUSEHOLDS
 -- ============================================
 CREATE TABLE households (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(100) NOT NULL,
   primary_currency VARCHAR(3) NOT NULL DEFAULT 'KES',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -36,7 +36,7 @@ CREATE INDEX idx_users_household ON users(household_id);
 -- 3. ACCOUNTS
 -- ============================================
 CREATE TABLE accounts (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
   type VARCHAR(20) NOT NULL
@@ -52,7 +52,7 @@ CREATE INDEX idx_accounts_household ON accounts(household_id);
 -- 4. CATEGORIES (with parent-child hierarchy)
 -- ============================================
 CREATE TABLE categories (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
   parent_id UUID REFERENCES categories(id) ON DELETE SET NULL,
@@ -72,7 +72,7 @@ CREATE INDEX idx_categories_parent ON categories(parent_id);
 -- 5. TRANSACTIONS
 -- ============================================
 CREATE TABLE transactions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
   account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
   category_id UUID NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
@@ -107,7 +107,7 @@ CREATE INDEX idx_transactions_type ON transactions(household_id, type);
 -- 6. BUDGETS (per-category monthly)
 -- ============================================
 CREATE TABLE budgets (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
   category_id UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
   amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
@@ -123,7 +123,7 @@ CREATE INDEX idx_budgets_household_period ON budgets(household_id, year, month);
 -- 7. OVERALL BUDGETS (monthly cap)
 -- ============================================
 CREATE TABLE overall_budgets (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
   amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
   month INT NOT NULL CHECK (month BETWEEN 1 AND 12),
@@ -136,7 +136,7 @@ CREATE TABLE overall_budgets (
 -- 8. RECURRING TRANSACTIONS
 -- ============================================
 CREATE TABLE recurring_transactions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
   category_id UUID NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
   account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
@@ -164,7 +164,7 @@ ALTER TABLE transactions
 -- 9. SAVINGS GOALS
 -- ============================================
 CREATE TABLE savings_goals (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
   target_amount DECIMAL(15,2) NOT NULL CHECK (target_amount > 0),
@@ -182,7 +182,7 @@ CREATE INDEX idx_savings_goals_household ON savings_goals(household_id);
 -- 10. GOAL CONTRIBUTIONS
 -- ============================================
 CREATE TABLE goal_contributions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   goal_id UUID NOT NULL REFERENCES savings_goals(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
@@ -197,7 +197,7 @@ CREATE INDEX idx_goal_contributions_goal ON goal_contributions(goal_id);
 -- 11. DEBTS
 -- ============================================
 CREATE TABLE debts (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
   type VARCHAR(20) NOT NULL
@@ -219,7 +219,7 @@ CREATE INDEX idx_debts_household ON debts(household_id);
 -- 12. BILL REMINDERS
 -- ============================================
 CREATE TABLE bill_reminders (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
   amount DECIMAL(15,2),
@@ -238,7 +238,7 @@ CREATE INDEX idx_bill_reminders_household ON bill_reminders(household_id);
 -- 13. NOTIFICATIONS
 -- ============================================
 CREATE TABLE notifications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   type VARCHAR(30) NOT NULL

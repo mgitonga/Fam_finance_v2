@@ -22,8 +22,8 @@
   "mcp": {
     "servers": {
       "playwright": {
-        "args": ["@anthropic-ai/mcp-playwright"],
-        "command": "npx"
+        "command": "npx",
+        "args": ["@anthropic-ai/mcp-playwright@latest"]
       }
     }
   }

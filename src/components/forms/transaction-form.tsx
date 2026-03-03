@@ -166,16 +166,27 @@ export function TransactionForm({
             {...register('category_id')}
           >
             <option value="">Select category...</option>
-            {filteredCategories?.map((cat: CategoryWithChildren) => (
-              <optgroup key={cat.id} label={cat.name}>
-                <option value={cat.id}>{cat.name}</option>
-                {cat.children?.map((child) => (
-                  <option key={child.id} value={child.id}>
-                    &nbsp;&nbsp;{child.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
+            {filteredCategories?.map((cat: CategoryWithChildren) => {
+              const hasChildren = cat.children && cat.children.length > 0;
+              if (hasChildren) {
+                // Parent with sub-categories: only children are selectable
+                return (
+                  <optgroup key={cat.id} label={cat.name}>
+                    {cat.children?.map((child) => (
+                      <option key={child.id} value={child.id}>
+                        {child.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              }
+              // Standalone category (no children): selectable
+              return (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              );
+            })}
           </select>
           {errors.category_id && (
             <p className="mt-1 text-xs text-red-500">{errors.category_id.message}</p>

@@ -102,6 +102,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Account not found' }, { status: 400 });
     }
 
+    // Verify category is selectable (not a parent that has sub-categories)
+    const { data: category } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('id', parsed.data.category_id)
+      .eq('household_id', auth.context.householdId)
+      .single();
+
+    if (!category) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 400 });
+    }
+
+    const { count: childCount } = await supabase
+      .from('categories')
+      .select('id', { count: 'exact', head: true })
+      .eq('parent_id', parsed.data.category_id)
+      .eq('household_id', auth.context.householdId)
+      .eq('is_active', true);
+
+    if (childCount && childCount > 0) {
+      return NextResponse.json(
+        {
+          error: `"${category.name}" has sub-categories. Please select a specific sub-category instead.`,
+        },
+        { status: 400 },
+      );
+    }
+
     // Insert transaction
     const { data, error } = await supabase
       .from('transactions')

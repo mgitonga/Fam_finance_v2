@@ -135,16 +135,39 @@ export async function POST(request: NextRequest) {
         errors.push('Amount must be a positive number');
       }
 
-      // Match category
+      // Match category — prefer sub_category, fall back to category
+      // Parent categories with children are not selectable
       const categoryName = row.category?.toLowerCase();
       const subCategoryName = row.sub_category?.toLowerCase();
-      let matchedCategory = categoryMap.get(categoryName);
+      let matchedCategory:
+        | (typeof categoryMap extends Map<string, infer V> ? V : never)
+        | undefined;
 
-      if (subCategoryName && !matchedCategory) {
+      // First try sub_category (most specific)
+      if (subCategoryName) {
         matchedCategory = categoryMap.get(subCategoryName);
       }
+
+      // Fall back to category name
       if (!matchedCategory && categoryName) {
-        errors.push(`Category "${row.category}" not found`);
+        const candidate = categoryMap.get(categoryName);
+        if (candidate) {
+          // Check if this category has children — if so, reject it
+          const hasChildren = (categories || []).some((c) => c.parent_id === candidate.id);
+          if (hasChildren) {
+            errors.push(
+              `"${row.category}" is a parent category with sub-categories. Please specify a sub-category.`,
+            );
+          } else {
+            matchedCategory = candidate;
+          }
+        } else {
+          errors.push(`Category "${row.category}" not found`);
+        }
+      }
+
+      if (!matchedCategory && !errors.some((e) => e.includes('ategory'))) {
+        errors.push('No category specified');
       }
 
       // Match account

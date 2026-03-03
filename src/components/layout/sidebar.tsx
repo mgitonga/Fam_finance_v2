@@ -12,6 +12,7 @@ import {
   Bell,
   BarChart3,
   Upload,
+  Download,
   Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,7 @@ const navItems = [
   { href: '/bills', label: 'Bills', icon: Bell },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/import', label: 'Import', icon: Upload },
+  { href: '/export', label: 'Export', icon: Download },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 

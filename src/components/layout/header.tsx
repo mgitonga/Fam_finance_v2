@@ -7,6 +7,7 @@ import { APP_NAME } from '@/lib/constants';
 import { logout } from '@/lib/supabase/auth-actions';
 import { useAuth } from '@/providers/auth-provider';
 import { useNotifications, useMarkRead, useMarkAllRead } from '@/hooks/use-notifications';
+import { ThemeToggle } from './theme-toggle';
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -43,6 +44,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        <ThemeToggle />
         <div className="relative">
           <button
             onClick={() => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateBudgetInput } from '@/lib/validations/budget';
+import type { CreateBudgetInput, UpdateBudgetInput } from '@/lib/validations/budget';
 
 const BUDGETS_KEY = ['budgets'];
 
@@ -88,6 +88,44 @@ export function useCopyBudgets() {
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to copy budgets');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BUDGETS_KEY });
+    },
+  });
+}
+
+export function useUpdateBudget() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateBudgetInput }) => {
+      const response = await fetch(`/api/budgets/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update budget');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BUDGETS_KEY });
+    },
+  });
+}
+
+export function useDeleteBudget() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/budgets/${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete budget');
       }
       return response.json();
     },

@@ -7,12 +7,24 @@ import {
   useSetBudget,
   useSetOverallBudget,
   useCopyBudgets,
+  useUpdateBudget,
+  useDeleteBudget,
 } from '@/hooks/use-budgets';
 import { useCategories } from '@/hooks/use-categories';
 import { BudgetProgress } from '@/components/dashboard/budget-progress';
 import { formatKES } from '@/lib/utils';
 import { getBudgetStatus } from '@/lib/validations/budget';
-import { Loader2, ChevronLeft, ChevronRight, Copy, Plus } from 'lucide-react';
+import {
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Plus,
+  Pencil,
+  Trash2,
+  Check,
+  X,
+} from 'lucide-react';
 
 type BudgetWithSpending = {
   id: string;
@@ -54,6 +66,8 @@ export default function BudgetsPage() {
   const [budgetAmount, setBudgetAmount] = useState('');
   const [overallAmount, setOverallAmount] = useState('');
   const [showOverallForm, setShowOverallForm] = useState(false);
+  const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState('');
 
   const { data: budgets, isLoading } = useBudgets(month, year);
   const { data: overallData } = useOverallBudget(month, year);
@@ -61,6 +75,8 @@ export default function BudgetsPage() {
   const setBudget = useSetBudget();
   const setOverallBudget = useSetOverallBudget();
   const copyBudgets = useCopyBudgets();
+  const updateBudget = useUpdateBudget();
+  const deleteBudget = useDeleteBudget();
 
   const overallBudget = overallData?.budget;
   const totalSpent = overallData?.spent || 0;
@@ -94,6 +110,28 @@ export default function BudgetsPage() {
     setSelectedCategory('');
     setBudgetAmount('');
     setShowAddForm(false);
+  }
+
+  function startEditBudget(budget: BudgetWithSpending) {
+    setEditingBudgetId(budget.id);
+    setEditAmount(String(budget.amount));
+  }
+
+  function cancelEditBudget() {
+    setEditingBudgetId(null);
+    setEditAmount('');
+  }
+
+  async function handleUpdateBudget(id: string) {
+    if (!editAmount) return;
+    await updateBudget.mutateAsync({ id, data: { amount: parseFloat(editAmount) } });
+    cancelEditBudget();
+  }
+
+  async function handleDeleteBudget(id: string) {
+    if (confirm('Remove this budget? The category spending data will not be affected.')) {
+      await deleteBudget.mutateAsync(id);
+    }
   }
 
   async function handleSetOverall() {
@@ -340,13 +378,78 @@ export default function BudgetsPage() {
           </div>
         )}
         {(budgets || []).map((budget: BudgetWithSpending) => (
-          <BudgetProgress
+          <div
             key={budget.id}
-            categoryName={budget.categories?.name || 'Unknown'}
-            categoryColor={budget.categories?.color}
-            spent={budget.spent}
-            budget={Number(budget.amount)}
-          />
+            className="rounded-lg border bg-white p-4 dark:border-gray-800 dark:bg-gray-900"
+            data-testid="budget-row"
+          >
+            {editingBudgetId === budget.id ? (
+              /* Inline edit mode */
+              <div className="flex items-center gap-2">
+                <span className="flex-1 font-medium">{budget.categories?.name || 'Unknown'}</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
+                  className="w-32 rounded-md border px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800"
+                  data-testid="edit-budget-amount"
+                  autoFocus
+                />
+                <button
+                  onClick={() => handleUpdateBudget(budget.id)}
+                  disabled={updateBudget.isPending}
+                  className="rounded p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                  aria-label="Save"
+                  data-testid="save-budget-edit"
+                >
+                  {updateBudget.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4" />
+                  )}
+                </button>
+                <button
+                  onClick={cancelEditBudget}
+                  className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  aria-label="Cancel"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              /* Display mode with edit/delete actions */
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  <BudgetProgress
+                    categoryName={budget.categories?.name || 'Unknown'}
+                    categoryColor={budget.categories?.color}
+                    spent={budget.spent}
+                    budget={Number(budget.amount)}
+                  />
+                </div>
+                <div className="flex shrink-0 gap-1 pt-0.5">
+                  <button
+                    onClick={() => startEditBudget(budget)}
+                    className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    aria-label="Edit budget"
+                    data-testid="edit-budget-btn"
+                  >
+                    <Pencil className="h-4 w-4 text-gray-500" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteBudget(budget.id)}
+                    className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    aria-label="Delete budget"
+                    data-testid="delete-budget-btn"
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         ))}
       </div>
 

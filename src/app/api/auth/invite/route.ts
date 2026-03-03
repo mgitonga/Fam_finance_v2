@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthContext, requireAdmin } from '@/lib/supabase/auth-helpers';
 import { inviteUserSchema } from '@/lib/validations/user';
 
@@ -21,8 +22,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use service role to create user via Supabase Auth admin API
+    // Use regular client for RLS-scoped queries, admin client for auth.admin API
     const supabase = await createClient();
+    const adminSupabase = createAdminClient();
 
     // Check if user already exists in household
     const { data: existingUser } = await supabase
@@ -39,14 +41,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send invite email via Supabase Auth
-    const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(parsed.data.email, {
-      data: {
-        name: parsed.data.name,
-        role: 'contributor',
-        household_id: auth.context.householdId,
+    // Send invite email via Supabase Auth (requires service role key)
+    const { error: inviteError } = await adminSupabase.auth.admin.inviteUserByEmail(
+      parsed.data.email,
+      {
+        data: {
+          name: parsed.data.name,
+          role: 'contributor',
+          household_id: auth.context.householdId,
+        },
       },
-    });
+    );
 
     if (inviteError) {
       // Fallback: if admin API not available, use signUp with auto-confirm disabled

@@ -10,7 +10,19 @@ import {
   useUpdateCategory,
   useDeleteCategory,
 } from '@/hooks/use-categories';
-import { Loader2, Plus, Pencil, Trash2, X, ChevronRight } from 'lucide-react';
+import {
+  Loader2,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  ChevronRight,
+  Download,
+  Upload,
+  CheckCircle,
+  XCircle,
+  FileSpreadsheet,
+} from 'lucide-react';
 
 type CategoryWithChildren = {
   id: string;
@@ -31,6 +43,29 @@ export default function CategoriesSettingsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [parentId, setParentId] = useState<string | null>(null);
+
+  // Import/Export state
+  const [importStep, setImportStep] = useState<'idle' | 'preview' | 'result'>('idle');
+  const [importPreview, setImportPreview] = useState<{
+    rows: {
+      row: number;
+      name: string;
+      type: string;
+      parent_category: string;
+      action: string;
+      errors: string[];
+      valid: boolean;
+    }[];
+    summary: { total: number; toCreate: number; toSkip: number; errors: number };
+  } | null>(null);
+  const [importResult, setImportResult] = useState<{
+    created: number;
+    skipped: number;
+    errors: number;
+    errorDetails: { row: number; error: string }[];
+  } | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const {
     register,
@@ -103,6 +138,94 @@ export default function CategoriesSettingsPage() {
     );
   };
 
+  // ---- Import/Export handlers ----
+
+  async function handleExport() {
+    const response = await fetch('/api/categories/export');
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'famfin-categories.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleImportTemplate() {
+    const response = await fetch('/api/categories/import/template');
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'famfin-categories-template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleImportUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportError(null);
+    setImportLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch('/api/categories/import/preview', {
+        method: 'POST',
+        body: formData,
+      });
+      const json = await response.json();
+      if (!response.ok) {
+        setImportError(json.error || 'Failed to parse CSV');
+        return;
+      }
+      setImportPreview(json.data);
+      setImportStep('preview');
+    } catch {
+      setImportError('Failed to upload file');
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
+  async function handleImportConfirm() {
+    if (!importPreview) return;
+    const validRows = importPreview.rows.filter((r) => r.valid && r.action === 'create');
+    if (validRows.length === 0) {
+      setImportError('No valid rows to import');
+      return;
+    }
+
+    setImportLoading(true);
+    setImportError(null);
+    try {
+      const response = await fetch('/api/categories/import/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: validRows }),
+      });
+      const json = await response.json();
+      if (!response.ok) {
+        setImportError(json.error || 'Import failed');
+        return;
+      }
+      setImportResult(json.data);
+      setImportStep('result');
+    } catch {
+      setImportError('Import failed');
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
+  function resetImport() {
+    setImportStep('idle');
+    setImportPreview(null);
+    setImportResult(null);
+    setImportError(null);
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-gray-500">
@@ -121,15 +244,164 @@ export default function CategoriesSettingsPage() {
           </p>
         </div>
         {!showForm && (
-          <button
-            onClick={() => startCreate()}
-            className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white"
-            data-testid="add-category-btn"
-          >
-            <Plus className="h-4 w-4" /> Add Category
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-1 rounded-md border px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
+              data-testid="export-categories-btn"
+            >
+              <Download className="h-4 w-4" /> Export CSV
+            </button>
+            <label
+              className="flex cursor-pointer items-center gap-1 rounded-md border px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
+              data-testid="import-categories-btn"
+            >
+              <Upload className="h-4 w-4" /> Import CSV
+              <input
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={handleImportUpload}
+                disabled={importLoading}
+              />
+            </label>
+            <button
+              onClick={() => startCreate()}
+              className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white"
+              data-testid="add-category-btn"
+            >
+              <Plus className="h-4 w-4" /> Add Category
+            </button>
+          </div>
         )}
       </div>
+
+      {/* Import error */}
+      {importError && (
+        <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+          {importError}
+        </div>
+      )}
+
+      {/* Import preview */}
+      {importStep === 'preview' && importPreview && (
+        <div className="mt-4 space-y-4">
+          <div className="flex items-center gap-4 rounded-lg border bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+            <div className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5 text-blue-500" />
+              <span className="font-medium">{importPreview.summary.total} rows</span>
+            </div>
+            <div className="flex items-center gap-2 text-green-600">
+              <CheckCircle className="h-4 w-4" />
+              <span>{importPreview.summary.toCreate} to create</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-500">
+              <span>{importPreview.summary.toSkip} to skip (exist)</span>
+            </div>
+            {importPreview.summary.errors > 0 && (
+              <div className="flex items-center gap-2 text-red-600">
+                <XCircle className="h-4 w-4" />
+                <span>{importPreview.summary.errors} errors</span>
+              </div>
+            )}
+          </div>
+          <div className="overflow-x-auto rounded-lg border dark:border-gray-800">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-gray-50 text-left dark:bg-gray-800">
+                  <th className="px-3 py-2 font-medium">Row</th>
+                  <th className="px-3 py-2 font-medium">Status</th>
+                  <th className="px-3 py-2 font-medium">Name</th>
+                  <th className="px-3 py-2 font-medium">Type</th>
+                  <th className="px-3 py-2 font-medium">Parent</th>
+                </tr>
+              </thead>
+              <tbody>
+                {importPreview.rows.map((row) => (
+                  <tr
+                    key={row.row}
+                    className={`border-b ${!row.valid ? 'bg-red-50 dark:bg-red-950/20' : row.action === 'skip' ? 'bg-gray-50 dark:bg-gray-800/30' : ''}`}
+                  >
+                    <td className="px-3 py-2">{row.row}</td>
+                    <td className="px-3 py-2">
+                      {row.valid ? (
+                        row.action === 'create' ? (
+                          <span className="text-xs font-medium text-green-600">Create</span>
+                        ) : (
+                          <span className="text-xs text-gray-400">Skip (exists)</span>
+                        )
+                      ) : (
+                        <div>
+                          {row.errors.map((e, i) => (
+                            <p key={i} className="text-xs text-red-500">
+                              {e}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 font-medium">{row.name}</td>
+                    <td className="px-3 py-2 capitalize">{row.type}</td>
+                    <td className="px-3 py-2">{row.parent_category || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleImportConfirm}
+              disabled={importLoading || importPreview.summary.toCreate === 0}
+              className="bg-primary hover:bg-primary/90 flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              data-testid="confirm-category-import"
+            >
+              {importLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              Import {importPreview.summary.toCreate} categories
+            </button>
+            <button onClick={resetImport} className="rounded-md border px-4 py-2 text-sm">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Import result */}
+      {importStep === 'result' && importResult && (
+        <div className="mt-4 rounded-lg border bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="h-8 w-8 text-green-500" />
+            <div>
+              <h3 className="text-lg font-semibold">Import Complete</h3>
+              <p className="text-sm text-gray-500">
+                {importResult.created} categories created, {importResult.skipped} skipped,{' '}
+                {importResult.errors} errors
+              </p>
+            </div>
+          </div>
+          {importResult.errorDetails.length > 0 && (
+            <div className="mt-3">
+              <h4 className="text-sm font-medium text-red-600">Errors:</h4>
+              <ul className="mt-1 space-y-1">
+                {importResult.errorDetails.map((e, i) => (
+                  <li key={i} className="text-xs text-red-500">
+                    Row {e.row}: {e.error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <button
+            onClick={resetImport}
+            className="bg-primary hover:bg-primary/90 mt-4 rounded-md px-4 py-2 text-sm font-medium text-white"
+          >
+            Done
+          </button>
+        </div>
+      )}
 
       {showForm && (
         <form

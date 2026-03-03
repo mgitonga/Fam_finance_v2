@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
@@ -48,8 +49,10 @@ export async function register(formData: {
     return { error: 'Registration failed. Please try again.' };
   }
 
-  // 2. Create the household
-  const { data: household, error: householdError } = await supabase
+  // 2. Create the household (use admin client to bypass RLS — user has no household yet)
+  const adminClient = createAdminClient();
+
+  const { data: household, error: householdError } = await adminClient
     .from('households')
     .insert({ name: formData.householdName })
     .select()
@@ -60,7 +63,7 @@ export async function register(formData: {
   }
 
   // 3. Link user to household and set as admin
-  const { error: updateError } = await supabase
+  const { error: updateError } = await adminClient
     .from('users')
     .update({
       household_id: household.id,
@@ -74,7 +77,7 @@ export async function register(formData: {
   }
 
   // 4. Seed default categories for the household
-  const { error: seedError } = await supabase.rpc('seed_default_categories', {
+  const { error: seedError } = await adminClient.rpc('seed_default_categories', {
     p_household_id: household.id,
   });
 

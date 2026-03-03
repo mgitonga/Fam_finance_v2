@@ -1,11 +1,26 @@
-import { getUserProfile } from '@/lib/supabase/auth-actions';
+import { getUserProfile, getUser } from '@/lib/supabase/auth-actions';
 import { redirect } from 'next/navigation';
 
 export default async function DashboardPage() {
+  const user = await getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
   const profile = await getUserProfile();
 
+  // User is authenticated but profile is incomplete (failed registration)
   if (!profile) {
-    redirect('/login');
+    return (
+      <div data-testid="dashboard-page">
+        <h1 className="text-2xl font-bold">Account Setup Incomplete</h1>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
+          Your account was created but setup didn&apos;t complete. Please contact support or try
+          registering again with a different email.
+        </p>
+      </div>
+    );
   }
 
   return (

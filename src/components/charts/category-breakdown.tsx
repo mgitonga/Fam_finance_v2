@@ -17,20 +17,32 @@ export function CategoryBreakdownChart({ data }: CategoryBreakdownChartProps) {
   }
 
   return (
-    <div className="h-80" data-testid="category-breakdown-chart">
+    <div className="h-[450px]" data-testid="category-breakdown-chart">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
             data={data}
             cx="50%"
-            cy="50%"
-            innerRadius={55}
-            outerRadius={100}
+            cy="45%"
+            innerRadius={70}
+            outerRadius={140}
             paddingAngle={2}
             dataKey="amount"
             nameKey="category"
-            label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-            labelLine={false}
+            label={({ name, percent, x, y }) => (
+              <text
+                x={x}
+                y={y}
+                fill="currentColor"
+                textAnchor={x > 200 ? 'start' : 'end'}
+                dominantBaseline="central"
+                fontSize={12}
+                className="fill-foreground"
+              >
+                {`${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+              </text>
+            )}
+            labelLine={{ stroke: '#888', strokeWidth: 1 }}
           >
             {data.map((entry, index) => (
               <Cell
@@ -41,7 +53,14 @@ export function CategoryBreakdownChart({ data }: CategoryBreakdownChartProps) {
             ))}
           </Pie>
           <Tooltip formatter={(value) => formatKES(Number(value))} />
-          <Legend />
+          <Legend
+            verticalAlign="bottom"
+            align="center"
+            iconType="circle"
+            iconSize={10}
+            wrapperStyle={{ paddingTop: '16px' }}
+            formatter={(value) => <span className="text-foreground text-sm">{value}</span>}
+          />
         </PieChart>
       </ResponsiveContainer>
     </div>

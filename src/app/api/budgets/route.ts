@@ -14,10 +14,10 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Get budgets for the month
+    // Get budgets for the month (budgets are set on parent categories)
     const { data: budgets, error } = await supabase
       .from('budgets')
-      .select('*, categories(name, color, type)')
+      .select('*, categories(id, name, color, type, parent_id)')
       .eq('household_id', auth.context.householdId)
       .eq('month', month)
       .eq('year', year)
@@ -27,7 +27,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Get spending per category for the same month
+    // Get all categories to build parent → children map
+    const { data: allCategories } = await supabase
+      .from('categories')
+      .select('id, name, color, type, parent_id')
+      .eq('household_id', auth.context.householdId)
+      .eq('is_active', true);
+
+    const childrenMap = new Map<string, typeof allCategories>();
+    for (const cat of allCategories || []) {
+      if (cat.parent_id) {
+        const existing = childrenMap.get(cat.parent_id) || [];
+        existing.push(cat);
+        childrenMap.set(cat.parent_id, existing);
+      }
+    }
+
+    // Get spending for the month
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const endDate =
       month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`;
@@ -40,18 +56,41 @@ export async function GET(request: NextRequest) {
       .gte('date', startDate)
       .lt('date', endDate);
 
-    // Aggregate spending by category
+    // Aggregate spending by category_id
     const spendingMap = new Map<string, number>();
     (spending || []).forEach((tx) => {
       const current = spendingMap.get(tx.category_id) || 0;
       spendingMap.set(tx.category_id, current + Number(tx.amount));
     });
 
-    // Merge budget + spending data
-    const budgetsWithSpending = (budgets || []).map((budget) => ({
-      ...budget,
-      spent: spendingMap.get(budget.category_id) || 0,
-    }));
+    // For each budget (parent category), aggregate spending from parent + all children
+    const budgetsWithSpending = (budgets || []).map((budget) => {
+      const parentId = budget.category_id;
+      const children = childrenMap.get(parentId) || [];
+      const childIds = children.map((c) => c.id);
+
+      // Spending directly on parent
+      const directSpent = spendingMap.get(parentId) || 0;
+
+      // Spending on sub-categories
+      const subCategoryBreakdown = children.map((child) => ({
+        id: child.id,
+        name: child.name,
+        color: child.color,
+        spent: spendingMap.get(child.id) || 0,
+      }));
+
+      // Total = parent direct + all children
+      const totalSpent =
+        directSpent + childIds.reduce((sum, id) => sum + (spendingMap.get(id) || 0), 0);
+
+      return {
+        ...budget,
+        spent: totalSpent,
+        direct_spent: directSpent,
+        sub_category_breakdown: subCategoryBreakdown,
+      };
+    });
 
     return NextResponse.json({ data: budgetsWithSpending });
   } catch {
@@ -78,6 +117,27 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createClient();
+
+    // Verify category is a parent (no parent_id) — budgets only on parent categories
+    const { data: category } = await supabase
+      .from('categories')
+      .select('id, name, parent_id')
+      .eq('id', parsed.data.category_id)
+      .eq('household_id', auth.context.householdId)
+      .single();
+
+    if (!category) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+    }
+
+    if (category.parent_id) {
+      return NextResponse.json(
+        {
+          error: `"${category.name}" is a sub-category. Budgets can only be set on parent categories. Sub-category spending rolls up automatically.`,
+        },
+        { status: 400 },
+      );
+    }
 
     // Upsert budget (update if exists for same category/month/year)
     const { data, error } = await supabase

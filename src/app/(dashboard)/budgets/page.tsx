@@ -18,6 +18,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Copy,
   Plus,
   Pencil,
@@ -26,11 +27,20 @@ import {
   X,
 } from 'lucide-react';
 
+type SubCategorySpending = {
+  id: string;
+  name: string;
+  color: string | null;
+  spent: number;
+};
+
 type BudgetWithSpending = {
   id: string;
   category_id: string;
   amount: number;
   spent: number;
+  direct_spent: number;
+  sub_category_breakdown: SubCategorySpending[];
   categories: { name: string; color: string | null; type: string } | null;
 };
 
@@ -39,6 +49,7 @@ type CategoryWithChildren = {
   name: string;
   type: string;
   color: string | null;
+  parent_id?: string | null;
   children?: { id: string; name: string; type: string }[];
 };
 
@@ -68,6 +79,7 @@ export default function BudgetsPage() {
   const [showOverallForm, setShowOverallForm] = useState(false);
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState('');
+  const [expandedBudgetId, setExpandedBudgetId] = useState<string | null>(null);
 
   const { data: budgets, isLoading } = useBudgets(month, year);
   const { data: overallData } = useOverallBudget(month, year);
@@ -160,14 +172,14 @@ export default function BudgetsPage() {
     }
   }
 
-  // Categories that don't have a budget yet
+  // Only parent expense categories that don't have a budget yet
   const budgetedCategoryIds = new Set(
     (budgets || []).map((b: BudgetWithSpending) => b.category_id),
   );
-  const expenseCategories = (categories || []).filter(
-    (c: CategoryWithChildren) => c.type === 'expense' || c.type === 'both',
+  const parentExpenseCategories = (categories || []).filter(
+    (c: CategoryWithChildren) => (c.type === 'expense' || c.type === 'both') && !c.parent_id,
   );
-  const unbudgetedCategories = expenseCategories.filter(
+  const unbudgetedCategories = parentExpenseCategories.filter(
     (c: CategoryWithChildren) => !budgetedCategoryIds.has(c.id),
   );
 
@@ -315,6 +327,9 @@ export default function BudgetsPage() {
           data-testid="budget-form"
         >
           <h3 className="font-medium">Set Category Budget</h3>
+          <p className="mt-1 mb-2 text-xs text-gray-500">
+            Budgets are set on parent categories. Sub-category spending automatically rolls up.
+          </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <select
               value={selectedCategory}
@@ -322,7 +337,7 @@ export default function BudgetsPage() {
               className="rounded-md border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"
               data-testid="budget-category"
             >
-              <option value="">Select category...</option>
+              <option value="">Select parent category...</option>
               {unbudgetedCategories.map((cat: CategoryWithChildren) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
@@ -377,80 +392,161 @@ export default function BudgetsPage() {
             </p>
           </div>
         )}
-        {(budgets || []).map((budget: BudgetWithSpending) => (
-          <div
-            key={budget.id}
-            className="rounded-lg border bg-white p-4 dark:border-gray-800 dark:bg-gray-900"
-            data-testid="budget-row"
-          >
-            {editingBudgetId === budget.id ? (
-              /* Inline edit mode */
-              <div className="flex items-center gap-2">
-                <span className="flex-1 font-medium">{budget.categories?.name || 'Unknown'}</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={editAmount}
-                  onChange={(e) => setEditAmount(e.target.value)}
-                  className="w-32 rounded-md border px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800"
-                  data-testid="edit-budget-amount"
-                  autoFocus
-                />
-                <button
-                  onClick={() => handleUpdateBudget(budget.id)}
-                  disabled={updateBudget.isPending}
-                  className="rounded p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
-                  aria-label="Save"
-                  data-testid="save-budget-edit"
-                >
-                  {updateBudget.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Check className="h-4 w-4" />
-                  )}
-                </button>
-                <button
-                  onClick={cancelEditBudget}
-                  className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  aria-label="Cancel"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+        {(budgets || []).map((budget: BudgetWithSpending) => {
+          const hasSubCategories = budget.sub_category_breakdown?.length > 0;
+          const isExpanded = expandedBudgetId === budget.id;
+
+          return (
+            <div
+              key={budget.id}
+              className="rounded-lg border bg-white dark:border-gray-800 dark:bg-gray-900"
+              data-testid="budget-row"
+            >
+              <div className="p-4">
+                {editingBudgetId === budget.id ? (
+                  /* Inline edit mode */
+                  <div className="flex items-center gap-2">
+                    <span className="flex-1 font-medium">
+                      {budget.categories?.name || 'Unknown'}
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editAmount}
+                      onChange={(e) => setEditAmount(e.target.value)}
+                      className="w-32 rounded-md border px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800"
+                      data-testid="edit-budget-amount"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => handleUpdateBudget(budget.id)}
+                      disabled={updateBudget.isPending}
+                      className="rounded p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                      aria-label="Save"
+                      data-testid="save-budget-edit"
+                    >
+                      {updateBudget.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={cancelEditBudget}
+                      className="rounded p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      aria-label="Cancel"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  /* Display mode with edit/delete/expand actions */
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1">
+                      <div className="mb-1 flex items-center gap-2">
+                        {hasSubCategories && (
+                          <button
+                            onClick={() => setExpandedBudgetId(isExpanded ? null : budget.id)}
+                            className="rounded p-0.5 hover:bg-gray-100 dark:hover:bg-gray-800"
+                            aria-label={isExpanded ? 'Collapse' : 'Expand sub-categories'}
+                          >
+                            <ChevronDown
+                              className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-0' : '-rotate-90'}`}
+                            />
+                          </button>
+                        )}
+                        {hasSubCategories && (
+                          <span className="text-xs text-gray-400">
+                            {budget.sub_category_breakdown.length} sub-categories
+                          </span>
+                        )}
+                      </div>
+                      <BudgetProgress
+                        categoryName={budget.categories?.name || 'Unknown'}
+                        categoryColor={budget.categories?.color}
+                        spent={budget.spent}
+                        budget={Number(budget.amount)}
+                      />
+                    </div>
+                    <div className="flex shrink-0 gap-1 pt-0.5">
+                      <button
+                        onClick={() => startEditBudget(budget)}
+                        className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        aria-label="Edit budget"
+                        data-testid="edit-budget-btn"
+                      >
+                        <Pencil className="h-4 w-4 text-gray-500" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBudget(budget.id)}
+                        className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        aria-label="Delete budget"
+                        data-testid="delete-budget-btn"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            ) : (
-              /* Display mode with edit/delete actions */
-              <div className="flex items-start gap-2">
-                <div className="flex-1">
-                  <BudgetProgress
-                    categoryName={budget.categories?.name || 'Unknown'}
-                    categoryColor={budget.categories?.color}
-                    spent={budget.spent}
-                    budget={Number(budget.amount)}
-                  />
+
+              {/* Sub-category breakdown (expandable) */}
+              {isExpanded && hasSubCategories && (
+                <div className="border-t bg-gray-50/50 px-4 py-3 dark:bg-gray-800/30">
+                  <p className="mb-2 text-xs font-medium text-gray-400 uppercase">
+                    Sub-category Breakdown
+                  </p>
+                  <div className="space-y-2">
+                    {budget.sub_category_breakdown.map((sub) => {
+                      const subPct =
+                        budget.amount > 0
+                          ? Math.round((sub.spent / Number(budget.amount)) * 100)
+                          : 0;
+                      return (
+                        <div key={sub.id} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            {sub.color && (
+                              <span
+                                className="inline-block h-2 w-2 rounded-full"
+                                style={{ backgroundColor: sub.color }}
+                              />
+                            )}
+                            <span>{sub.name}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                              <div
+                                className="h-full rounded-full bg-gray-500 dark:bg-gray-400"
+                                style={{ width: `${Math.min(subPct, 100)}%` }}
+                              />
+                            </div>
+                            <span className="min-w-[80px] text-right text-gray-500">
+                              {formatKES(sub.spent)}
+                            </span>
+                            <span className="min-w-[30px] text-right text-xs text-gray-400">
+                              {subPct}%
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {budget.direct_spent > 0 && (
+                      <div className="flex items-center justify-between border-t pt-2 text-sm">
+                        <span className="text-gray-400 italic">Direct spending</span>
+                        <span className="text-gray-500">{formatKES(budget.direct_spent)}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between border-t pt-2 text-sm font-medium">
+                      <span>Total</span>
+                      <span>{formatKES(budget.spent)}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex shrink-0 gap-1 pt-0.5">
-                  <button
-                    onClick={() => startEditBudget(budget)}
-                    className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    aria-label="Edit budget"
-                    data-testid="edit-budget-btn"
-                  >
-                    <Pencil className="h-4 w-4 text-gray-500" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteBudget(budget.id)}
-                    className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    aria-label="Delete budget"
-                    data-testid="delete-budget-btn"
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Overall budget progress */}

@@ -44,4 +44,5 @@ yarn-error.log*
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+/.auth/
 next-env.d.ts

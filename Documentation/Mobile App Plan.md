@@ -6,15 +6,15 @@
 
 | Field                   | Value                                                         |
 | ----------------------- | ------------------------------------------------------------- |
-| Document Version        | 2.0                                                           |
-| Date                    | March 5, 2026                                                 |
-| Status                  | APPROVED                                                      |
+| Document Version        | 3.0                                                           |
+| Date                    | March 8, 2026                                                 |
+| Status                  | APPROVED (updated for debt-transaction linking feature)       |
 | Specification Reference | Specification Document v1.0 (Feb 20, 2026)                    |
 | Approach                | React Native / Expo (managed) — new native UI, shared backend |
 | Styling                 | NativeWind (Tailwind for React Native)                        |
 | Repository Strategy     | Monorepo (extend existing pnpm workspaces)                    |
 | API Strategy            | Reuse existing Next.js API routes with Bearer token auth      |
-| Target Timeline         | ~15 weeks (S0 + 5 phases)                                     |
+| Target Timeline         | ~16 weeks (S0 + 5 phases)                                     |
 | Sprint Cadence          | 1-week sprints                                                |
 | Team Size               | Solo developer                                                |
 
@@ -38,18 +38,21 @@
 
 ## 1. Summary
 
-Build a new Expo (managed) React Native app within the existing monorepo, sharing types, validations, and utilities via a `packages/shared` workspace. The mobile app consumes the same Next.js API routes (hosted on Vercel) by passing Supabase JWT tokens via `Authorization: Bearer` headers. Core features ship first (Dashboard, Transactions, Budgets, Bills), with native capabilities (push notifications, biometrics, camera, offline mode, home screen widgets) integrated throughout. NativeWind provides Tailwind-like styling for consistency with the web app.
+Build a new Expo (managed) React Native app within the existing monorepo, sharing types, validations, and utilities via a `packages/shared` workspace. The mobile app consumes the same Next.js API routes (hosted on Vercel) by passing Supabase JWT tokens via `Authorization: Bearer` headers. Core features ship first (Dashboard, Transactions, Budgets, Bills, Debts), with native capabilities (push notifications, biometrics, camera, offline mode, home screen widgets) integrated throughout. NativeWind provides Tailwind-like styling for consistency with the web app.
 
 ### MVP Feature Scope (Core Features First)
 
-| Included in MVP                            | Deferred to Phase 2 Release |
-| ------------------------------------------ | --------------------------- |
-| Dashboard (all 7 widgets)                  | Reports (6 chart types)     |
-| Transactions (full CRUD + filters)         | Savings Goals               |
-| Budgets (per-category + overall)           | Debt Tracking               |
-| Bill Reminders                             | Recurring Transactions      |
-| Notifications                              | Import / Export             |
-| Settings (profile, theme, accounts, users) | Category management         |
+| Included in MVP                                       | Deferred to Phase 2 Release |
+| ----------------------------------------------------- | --------------------------- |
+| Dashboard (all 10 widgets + customization)            | Reports (6 chart types)     |
+| Transactions (full CRUD + filters + debt linking)     | Savings Goals               |
+| Budgets (per-category + overall)                      | Recurring Transactions      |
+| Bill Reminders                                        | Import / Export             |
+| Debt Tracking (CRUD, payments, history, payoff)       | Category management         |
+| Notifications (8 types incl. debt reminders & payoff) |                             |
+| Settings (profile, theme, accounts, users)            |                             |
+
+> **Change log (v3.0):** Debt Tracking promoted from Phase 2 to Core MVP. Dashboard widgets updated from 7 to 10 (added `debt-overview`, `savings-goals`, `budget-progress`). Widget customization (reorder, enable/disable, persist) added to dashboard. Transaction form now includes debt repayment toggle + debt picker. Two new notification types: `debt_reminder`, `debt_payoff`. Budget vs Actual chart is now CSS-only (no Recharts). Migration numbering updated (00005–00008 now exist). E2E tests already written (7 test files).
 
 ---
 
@@ -100,7 +103,7 @@ Build a new Expo (managed) React Native app within the existing monorepo, sharin
 ├── Transactions  (list + [id] detail)
 ├── ＋ Add        (FAB center button → modal)
 ├── Budgets
-└── More          (settings, notifications, reports*, savings*, debts*)
+└── More          (settings, notifications, debts, reports*, savings*)
                   (* = Phase 2)
 
 modals/
@@ -121,10 +124,11 @@ modals/
 - Write tests for 5 core API route groups: `dashboard`, `transactions`, `budgets`, `accounts`, `categories`
 - Each test verifies HTTP status code and response shape
 
-### 3.2 Write Playwright E2E smoke tests
+### 3.2 Verify existing Playwright E2E tests
 
-- 5 critical paths: login, view dashboard, create transaction, view budgets, logout
-- Uses the existing Playwright config and `tests/e2e/` directory (currently empty)
+- 7 E2E test files already exist in `tests/e2e/`: auth, dashboard, transactions, budgets, debts, settings, navigation
+- Verify all existing tests pass; extend coverage if gaps identified
+- Ensure debt-related E2E tests are included in the regression baseline
 
 ### 3.3 Document and verify deployment
 
@@ -144,15 +148,17 @@ Move the existing Next.js app into `apps/web/`. Create `apps/mobile/` for Expo a
 
 ### 4.2 Extract shared code into `packages/shared/`
 
-> **Note on actual shared content:** The `@famfin/shared` package will initially contain: 8 Zod validation schema files, 1 database types file, 1 constants file, 2 portable utility functions (`formatKES`, `formatDate`), and 1 query key factory. This is valuable shared code, but it is thinner than it may appear — there are no extracted budget calculation, payoff projection, or milestone check functions in `utils.ts` (these calculations exist inline in API routes and components, not as standalone utilities).
+> **Note on actual shared content:** The `@famfin/shared` package will initially contain: 8 Zod validation schema files, 1 database types file, 1 constants file, 2 portable utility functions (`formatKES`, `formatDate`), 1 query key factory, the `DASHBOARD_WIDGETS` array with `getDefaultPreferences()` and `getWidgetDefinition()` helpers, and the `calculatePayoffDate()` debt utility function. The `cn()` helper (uses `clsx` + `tailwind-merge`) stays in `apps/web/` as it's web-only.
 
-| Source File                    | Shared Module                                                                                                                                          |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `src/lib/validations/*.ts`     | All Zod validation schemas                                                                                                                             |
-| `src/types/database.ts`        | Database types (auto-gen)                                                                                                                              |
-| `src/lib/constants.ts`         | Constants                                                                                                                                              |
-| `src/lib/utils.ts`             | Pure utility functions only — `formatKES()`, `formatDate()`. The `cn()` helper (uses `clsx` + `tailwind-merge`) stays in `apps/web/` as it's web-only. |
-| All hooks (query key patterns) | `queryKeys.ts` factory                                                                                                                                 |
+| Source File                           | Shared Module                                                                                                                                          |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/lib/validations/*.ts`            | All Zod validation schemas (including `debt_id` field in transaction schema)                                                                           |
+| `src/types/database.ts`               | Database types (auto-gen, includes `debt_id` on transactions, `reminder_days_before` on debts)                                                         |
+| `src/lib/constants.ts`                | Constants                                                                                                                                              |
+| `src/lib/utils.ts`                    | Pure utility functions only — `formatKES()`, `formatDate()`. The `cn()` helper (uses `clsx` + `tailwind-merge`) stays in `apps/web/` as it's web-only. |
+| `src/lib/dashboard-widgets.ts`        | `DASHBOARD_WIDGETS` array, `getDefaultPreferences()`, `getWidgetDefinition()` — widget registry used by both web and mobile                            |
+| `src/lib/validations/savings-debt.ts` | `calculatePayoffDate()` — pure function for debt payoff projection                                                                                     |
+| All hooks (query key patterns)        | `queryKeys.ts` factory                                                                                                                                 |
 
 ### 4.3 Configure `packages/shared/`
 
@@ -252,7 +258,21 @@ Create `apps/mobile/lib/api-client.ts`:
 
 ### 5.6 Create mobile hooks
 
-Rewrite the 10 hooks from `src/hooks/` for mobile. The web hooks use `'use client'` directive, relative `fetch('/api/...')`, and implicit cookie-based auth — **none of these work in React Native**. The mobile versions use the API client with absolute URLs and Bearer token injection. Query keys are imported from `@famfin/shared` to share cache key structure.
+Rewrite the 12 hooks from `src/hooks/` for mobile. The web hooks use `'use client'` directive, relative `fetch('/api/...')`, and implicit cookie-based auth — **none of these work in React Native**. The mobile versions use the API client with absolute URLs and Bearer token injection. Query keys are imported from `@famfin/shared` to share cache key structure.
+
+**Hooks to rewrite:**
+
+- `use-dashboard.ts` — dashboard data
+- `use-dashboard-preferences.ts` — widget customization preferences (GET/PUT/DELETE)
+- `use-transactions.ts` — transaction CRUD + `debt_id` filter support
+- `use-accounts.ts` — account CRUD
+- `use-budgets.ts` — budget CRUD
+- `use-bills.ts` — bill CRUD
+- `use-categories.ts` — category listing
+- `use-notifications.ts` — notification polling/display
+- `use-debts.ts` — debt CRUD, payment logging, payment history
+- `use-recurring.ts` — recurring transaction rules
+- `use-savings.ts` — savings goals (Phase 2 UI, but hook needed for dashboard widget)
 
 ### 5.7 Create auth provider
 
@@ -310,17 +330,28 @@ The current registration flow is a Next.js Server Action (`'use server'` in `aut
 
 ### 6.2 Dashboard (Week 6)
 
-Port the 6 dashboard widgets (SavingsWidget excluded — Savings Goals deferred to Phase 2):
+Port all 10 dashboard widgets with user-configurable layout:
 
 | Web Component           | Mobile Component                                   |
 | ----------------------- | -------------------------------------------------- |
 | `MetricCards`           | Horizontal scroll card strip                       |
-| `BudgetProgress`        | Vertical list with progress bars (green/amber/red) |
+| `BudgetVsActual`        | Bullet chart rows (CSS-based, no chart library)    |
+| `OverallBudgetWidget`   | Circular progress indicator                        |
 | `RecentTransactions`    | FlatList (tap → detail)                            |
 | `UpcomingBills`         | Card list with days-until-due badges               |
+| `SavingsGoals`          | Progress bars toward savings targets               |
 | `AccountBalances`       | Card list                                          |
-| `OverallBudgetWidget`   | Circular progress indicator                        |
 | `IncomeVsExpense` chart | `victory-native` bar chart                         |
+| `BudgetProgress`        | Vertical list with progress bars (green/amber/red) |
+| `DebtOverview`          | Debt cards with progress bars + payment info       |
+
+**Dashboard customization:**
+
+- "Customize" button opens a settings screen with sortable widget list (use `react-native-draggable-flatlist`)
+- Each widget has an enable/disable toggle
+- Order and visibility persisted via `PUT /api/users/me/dashboard-preferences`
+- Preferences loaded on mount from `GET /api/users/me/dashboard-preferences`
+- "Reset to defaults" restores the default widget order and visibility
 
 ### 6.3 Transactions (Weeks 6–7)
 
@@ -329,10 +360,12 @@ Port the 6 dashboard widgets (SavingsWidget excluded — Savings Goals deferred 
 **List screen:**
 
 - `FlatList` with infinite scroll pagination (`page` + `limit` params)
-- Filter bottom sheet (type, category, account, date range, payment method)
+- Filter bottom sheet (type, category, account, date range, payment method, **debt**)
 - Search bar with debounced input
 - Sort toggle (date, amount)
 - Swipe-left to delete with confirmation
+- **Debt Payment badge** on transactions linked to a debt (`debt_id` is non-null)
+- Support deep-linking from Debts screen: `?debt_id=` pre-filters to show only that debt's payments
 
 **Detail/edit screen:**
 
@@ -340,6 +373,10 @@ Port the 6 dashboard widgets (SavingsWidget excluded — Savings Goals deferred 
 - Hierarchical category picker (parents → expand children → leaf selection only)
 - Account picker, native date picker
 - Amount input with KES currency formatting
+- **Debt repayment toggle** (visible when type=expense): checkbox enables debt picker
+- **Debt picker**: lists active debts with name and outstanding balance
+- **Auto-fill on debt selection**: amount (minimum payment), category (Loans sub-category), description ("{debt.name} payment")
+- **Overpayment validation**: amount cannot exceed debt's outstanding balance
 - Receipt: camera capture via `expo-image-picker` or gallery
 - Upload to `POST /api/transactions/upload-receipt`
 
@@ -371,13 +408,37 @@ Port the 6 dashboard widgets (SavingsWidget excluded — Savings Goals deferred 
 - Days-until-due badge (`getDaysUntilDue()` from shared)
 - Add/edit/delete bill reminders
 
-### 6.6 More Tab & Settings (Week 9)
+### 6.6 Debt Tracking (Week 9)
+
+**Debt list screen:**
+
+- Summary cards: Total Outstanding (red), Total Monthly Payments
+- Debt cards showing: name, type, outstanding/original amounts, interest rate, monthly payment, % paid progress bar, projected payoff date
+- "Add Debt" button → form: name, type (mortgage/car_loan/personal_loan/credit_card/student_loan/other), original amount, outstanding balance, interest rate, monthly payment, payment day, start date
+- Delete debt (soft-deactivate with confirmation)
+
+**Payment flow per debt card:**
+
+- "Pay" button opens payment form: amount, account, date, payment method, description, category (auto-selected to Loans sub-category, overridable)
+- Overpayment blocked: amount cannot exceed outstanding balance
+- Payment creates a linked transaction (`debt_id` FK) and updates debt balance
+- Payoff celebration: animated banner when debt balance reaches 0 + `debt_payoff` notification sent to all household members
+
+**Payment history per debt:**
+
+- Toggle to show last 5 payments inline (date, amount, description)
+- "View all payments" link → navigates to Transactions screen filtered by `debt_id`
+- Shows `totalPaid` and `paymentCount` summary
+
+> **Dependency note:** The `Loans` parent category (with sub-categories like "Qona Loan Repayment", "Stima Loan Repayment") is seeded by `seed_default_categories()` on registration. The debt payment auto-fill resolves to the first Loans sub-category. This must work correctly from mobile sign-up.
+
+### 6.7 More Tab & Settings (Week 10)
 
 **More tab menu:**
 
 - Settings (profile, theme toggle, account CRUD for admins, user management for admins)
 - Notifications center (full list, mark read/all read)
-- Reports, Savings, Debts, Recurring, Export → placeholders (Phase 2)
+- Reports, Savings, Recurring, Export → placeholders (Phase 2)
 - Logout
 
 **Settings screens:**
@@ -396,7 +457,7 @@ Port the 6 dashboard widgets (SavingsWidget excluded — Savings Goals deferred 
 **Infrastructure:**
 
 - Register push tokens via `expo-notifications`
-- New `push_tokens` table in Supabase (migration `00005_push_tokens.sql`): `user_id`, `token`, `platform`, `created_at`
+- New `push_tokens` table in Supabase (migration `00009_push_tokens.sql`): `user_id`, `token`, `platform`, `created_at`
 - New API routes: `POST /api/users/me/push-token`, `DELETE /api/users/me/push-token`
 
 **Server-side delivery:**
@@ -405,7 +466,7 @@ Port the 6 dashboard widgets (SavingsWidget excluded — Savings Goals deferred 
 - Modify `createNotification()` in `src/lib/notifications.ts` to call the push module after inserting the in-app notification — query `push_tokens` for the target user(s) and send in batches (max 100 per Expo Push API request)
 - Handle push ticket receipts: store ticket IDs, poll receipt endpoint after 15 minutes to confirm delivery, remove invalid/expired tokens from `push_tokens` (device uninstalled app)
 - Bill reminder delivery: create an API route or cron job (`/api/notifications/send-bill-reminders`) that runs daily, queries bills due within reminder window, and dispatches push to household members
-- Types: budget threshold alerts, bill reminders (X days before due), recurring reminders (savings milestones deferred to Phase 2)
+- Types: budget threshold alerts, bill reminders (X days before due), recurring reminders, **debt payment reminders** (`debt_reminder` — X days before `payment_day`), **debt payoff celebrations** (`debt_payoff` — when a debt balance reaches 0)
 
 **In-app handling:**
 
@@ -480,23 +541,24 @@ Testing is distributed across all sprints rather than backloaded. Each sprint in
 
 **Per-sprint testing mandate (see Sprint Plan for details):**
 
-| Sprint | Testing Focus                                                          | Min Coverage |
-| ------ | ---------------------------------------------------------------------- | ------------ |
-| S0     | API integration tests (5 route groups), Playwright E2E smoke tests (5) | —            |
-| S1     | Shared package unit tests (schemas, utils, constants, query keys)      | 90%          |
-| S2     | Bearer auth integration tests (valid/invalid/expired tokens via curl)  | —            |
-| S3     | API client unit tests (mock fetch), auth provider logic tests          | 80%          |
-| S4     | UI component render tests (Button, Input, Card, BottomSheet, etc.)     | 80%          |
-| S5     | Dashboard screen integration test (renders with mock data)             | —            |
-| S6     | Transaction list integration test, filter logic unit tests             | —            |
-| S7     | Transaction form integration test, category picker test                | —            |
-| S8     | Budget/bill screen integration tests                                   | —            |
-| S9     | Settings + notification center integration tests                       | —            |
-| S10    | Push token registration unit tests, biometric flow tests               | 80%          |
-| S11    | Read cache layer unit tests, connectivity handler tests                | 80%          |
-| S12    | Offline queue/sync unit tests, conflict resolution tests               | 90%          |
-| S13    | Accessibility audit tests (VoiceOver/TalkBack), error boundary tests   | —            |
-| S14    | E2E test suite (3+ critical flows), final coverage audit ≥80% overall  | 80%          |
+| Sprint | Testing Focus                                                                          | Min Coverage |
+| ------ | -------------------------------------------------------------------------------------- | ------------ |
+| S0     | API integration tests (5 route groups), verify existing Playwright E2E tests (7 files) | —            |
+| S1     | Shared package unit tests (schemas, utils, constants, query keys, widgets)             | 90%          |
+| S2     | Bearer auth integration tests (valid/invalid/expired tokens via curl)                  | —            |
+| S3     | API client unit tests (mock fetch), auth provider logic tests                          | 80%          |
+| S4     | UI component render tests (Button, Input, Card, BottomSheet, etc.)                     | 80%          |
+| S5     | Dashboard screen integration test (renders with mock data)                             | —            |
+| S6     | Transaction list integration test, filter logic unit tests                             | —            |
+| S7     | Transaction form integration test, category picker test, debt toggle test              | —            |
+| S8     | Budget/bill screen integration tests                                                   | —            |
+| S9     | Debt screen integration tests, payment history, payoff celebration                     | —            |
+| S10    | Settings + notification center integration tests                                       | —            |
+| S10    | Push token registration unit tests, biometric flow tests                               | 80%          |
+| S11    | Read cache layer unit tests, connectivity handler tests                                | 80%          |
+| S12    | Offline queue/sync unit tests, conflict resolution tests                               | 90%          |
+| S13    | Accessibility audit tests (VoiceOver/TalkBack), error boundary tests                   | —            |
+| S14    | E2E test suite (3+ critical flows incl. debt payment), final audit                     | 80%          |
 
 **E2E tests** (Maestro or Detox) — written in Sprint 14: Login → Dashboard → Add Transaction → Verify; budget creation + threshold alerts; offline create → online sync
 
@@ -533,16 +595,16 @@ These targets are validated during Sprint 13 (polish phase) and enforced in CI d
 
 ## 9. Key Decisions
 
-| Decision             | Choice                           | Rationale                                                                               |
-| -------------------- | -------------------------------- | --------------------------------------------------------------------------------------- |
-| Mobile framework     | React Native / Expo (managed)    | EAS handles builds, signing, OTA. Expo Router mirrors Next.js file-based routing.       |
-| API strategy         | Reuse Next.js API routes         | Single source of truth for business logic (balance updates, notifications, validation). |
-| Repository structure | Monorepo (pnpm workspaces)       | Already configured. Types, validations, utils shared via `@famfin/shared`.              |
-| Styling              | NativeWind                       | Closest to existing Tailwind workflow. Design tokens shareable.                         |
-| MVP scope            | Core features first              | Dashboard, Transactions, Budgets, Bills. Reports/Savings/Debts follow.                  |
-| Charts               | `victory-native`                 | Better API, active maintenance, supports needed chart types.                            |
-| Offline storage      | AsyncStorage-based cache + queue | Full offline-first DB (WatermelonDB) may be overkill for MVP.                           |
-| Push notifications   | Expo Push Notifications          | Simpler setup, cross-platform, compatible with managed workflow.                        |
+| Decision             | Choice                           | Rationale                                                                                            |
+| -------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Mobile framework     | React Native / Expo (managed)    | EAS handles builds, signing, OTA. Expo Router mirrors Next.js file-based routing.                    |
+| API strategy         | Reuse Next.js API routes         | Single source of truth for business logic (balance updates, notifications, validation).              |
+| Repository structure | Monorepo (pnpm workspaces)       | Already configured. Types, validations, utils shared via `@famfin/shared`.                           |
+| Styling              | NativeWind                       | Closest to existing Tailwind workflow. Design tokens shareable.                                      |
+| MVP scope            | Core features first              | Dashboard, Transactions, Budgets, Bills, Debts. Reports/Savings follow.                              |
+| Charts               | `victory-native` (+ CSS-based)   | Budget vs Actual uses CSS-only bullet chart (no chart lib). Income vs Expense uses `victory-native`. |
+| Offline storage      | AsyncStorage-based cache + queue | Full offline-first DB (WatermelonDB) may be overkill for MVP.                                        |
+| Push notifications   | Expo Push Notifications          | Simpler setup, cross-platform, compatible with managed workflow.                                     |
 
 ---
 
@@ -550,13 +612,15 @@ These targets are validated during Sprint 13 (polish phase) and enforced in CI d
 
 ### Fully Shareable (copy to `@famfin/shared`)
 
-| Item                                          | Why                                  |
-| --------------------------------------------- | ------------------------------------ |
-| Zod validation schemas                        | Pure TypeScript, no web dependencies |
-| Database types                                | Generated types, framework-agnostic  |
-| Constants                                     | Pure data                            |
-| Utility functions (`formatKES`, `formatDate`) | Pure logic, no DOM dependencies      |
-| TanStack Query key patterns                   | Same library works in React Native   |
+| Item                                                     | Why                                  |
+| -------------------------------------------------------- | ------------------------------------ |
+| Zod validation schemas (incl. `debt_id` in transaction)  | Pure TypeScript, no web dependencies |
+| Database types (incl. `debt_id`, `reminder_days_before`) | Generated types, framework-agnostic  |
+| Constants                                                | Pure data                            |
+| Utility functions (`formatKES`, `formatDate`)            | Pure logic, no DOM dependencies      |
+| `calculatePayoffDate()` (debt projection)                | Pure math function                   |
+| `DASHBOARD_WIDGETS`, `getDefaultPreferences()`           | Widget registry, pure data           |
+| TanStack Query key patterns                              | Same library works in React Native   |
 
 ### Needs Adaptation
 
@@ -571,13 +635,13 @@ These targets are validated during Sprint 13 (polish phase) and enforced in CI d
 ### Must Rewrite Completely
 
 | Item              | Why                                                                                                           |
-| ----------------- | ------------------------------------------------------------------------------------------------------------- |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | All UI components | React DOM → React Native primitives                                                                           |
 | Navigation        | Next.js App Router → Expo Router                                                                              |
 | Data hooks        | `'use client'` + relative `fetch('/api/...')` + implicit cookies → API client with absolute URL + Bearer auth |
 | Registration flow | Server Action (`redirect()`) → `POST /api/auth/register` API route (JSON response)                            |
 | Layout/Sidebar    | Web layout → Tab navigation / Drawer                                                                          |
-| Charts            | Recharts → `victory-native`                                                                                   |
+| Charts            | Recharts (Budget vs Actual uses CSS-only)                                                                     | `victory-native` for Income vs Expense; RN `View`-based for budget bullet chart |
 | CSS/Styling       | Tailwind CSS → NativeWind                                                                                     |
 | PDF export        | Different library needed for native                                                                           |
 | CSV export/import | Different file system APIs                                                                                    |

@@ -46,6 +46,24 @@ export type Database = {
           },
         ];
       };
+      dashboard_preferences: {
+        Row: {
+          user_id: string;
+          preferences: Json;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          preferences: Json;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          preferences?: Json;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       bill_reminders: {
         Row: {
           amount: number | null;
@@ -212,6 +230,7 @@ export type Database = {
           outstanding_balance: number;
           payment_day: number | null;
           projected_payoff_date: string | null;
+          reminder_days_before: number;
           start_date: string;
           type: string;
         };
@@ -227,6 +246,7 @@ export type Database = {
           outstanding_balance: number;
           payment_day?: number | null;
           projected_payoff_date?: string | null;
+          reminder_days_before?: number;
           start_date: string;
           type: string;
         };
@@ -242,6 +262,7 @@ export type Database = {
           outstanding_balance?: number;
           payment_day?: number | null;
           projected_payoff_date?: string | null;
+          reminder_days_before?: number;
           start_date?: string;
           type?: string;
         };
@@ -528,6 +549,7 @@ export type Database = {
           category_id: string;
           created_at: string;
           date: string;
+          debt_id: string | null;
           description: string | null;
           household_id: string;
           id: string;
@@ -550,6 +572,7 @@ export type Database = {
           category_id: string;
           created_at?: string;
           date: string;
+          debt_id?: string | null;
           description?: string | null;
           household_id: string;
           id?: string;
@@ -572,6 +595,7 @@ export type Database = {
           category_id?: string;
           created_at?: string;
           date?: string;
+          debt_id?: string | null;
           description?: string | null;
           household_id?: string;
           id?: string;
@@ -611,6 +635,13 @@ export type Database = {
             referencedColumns: ['id'];
           },
           {
+            foreignKeyName: 'transactions_debt_id_fkey';
+            columns: ['debt_id'];
+            isOneToOne: false;
+            referencedRelation: 'debts';
+            referencedColumns: ['id'];
+          },
+          {
             foreignKeyName: 'transactions_household_id_fkey';
             columns: ['household_id'];
             isOneToOne: false;
@@ -637,6 +668,7 @@ export type Database = {
         Row: {
           avatar_url: string | null;
           created_at: string;
+          dashboard_preferences: Json | null;
           email: string;
           household_id: string | null;
           id: string;
@@ -646,6 +678,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null;
           created_at?: string;
+          dashboard_preferences?: Json | null;
           email: string;
           household_id?: string | null;
           id: string;
@@ -655,6 +688,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null;
           created_at?: string;
+          dashboard_preferences?: Json | null;
           email?: string;
           household_id?: string | null;
           id?: string;

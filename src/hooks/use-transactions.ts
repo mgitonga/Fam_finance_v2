@@ -18,6 +18,7 @@ type TransactionFilters = {
   date_from?: string;
   date_to?: string;
   search?: string;
+  debt_id?: string;
 };
 
 export function useTransactions(filters: TransactionFilters = {}) {
@@ -69,6 +70,7 @@ export function useCreateTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
     },
   });
 }
@@ -91,6 +93,7 @@ export function useUpdateTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
     },
   });
 }
@@ -106,6 +109,7 @@ export function useDeleteTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
     },
   });
 }

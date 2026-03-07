@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getAuthContext } from '@/lib/supabase/auth-helpers';
 import { createTransactionSchema } from '@/lib/validations/transaction';
+import { calculatePayoffDate } from '@/lib/validations/savings-debt';
+import { createDebtPayoffNotification } from '@/lib/notifications';
 import { ITEMS_PER_PAGE } from '@/lib/constants';
 
 export async function GET(request: NextRequest) {
@@ -49,6 +51,9 @@ export async function GET(request: NextRequest) {
     if (search) {
       query = query.or(`description.ilike.%${search}%,merchant.ilike.%${search}%`);
     }
+
+    const debtId = searchParams.get('debt_id');
+    if (debtId) query = query.eq('debt_id', debtId);
 
     // Sort + paginate
     query = query.order(sortBy, { ascending: sortOrder }).range(offset, offset + limit - 1);
@@ -130,6 +135,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // If linked to a debt, validate the debt and block overpayment
+    if (parsed.data.debt_id) {
+      const { data: debt } = await supabase
+        .from('debts')
+        .select('id, outstanding_balance, is_active, name')
+        .eq('id', parsed.data.debt_id)
+        .eq('household_id', auth.context.householdId)
+        .single();
+
+      if (!debt) {
+        return NextResponse.json({ error: 'Debt not found' }, { status: 400 });
+      }
+      if (!debt.is_active) {
+        return NextResponse.json({ error: 'Debt is already paid off' }, { status: 400 });
+      }
+      if (parsed.data.amount > Number(debt.outstanding_balance)) {
+        return NextResponse.json(
+          {
+            error: `Amount exceeds outstanding balance of KES ${Number(debt.outstanding_balance).toLocaleString()}`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     // Insert transaction
     const { data, error } = await supabase
       .from('transactions')
@@ -152,7 +182,45 @@ export async function POST(request: NextRequest) {
       .update({ balance: account.balance + balanceChange })
       .eq('id', parsed.data.account_id);
 
-    return NextResponse.json({ data }, { status: 201 });
+    // If this transaction is linked to a debt, update the debt balance
+    let isPayoff = false;
+    if (parsed.data.debt_id) {
+      const { data: debt } = await supabase
+        .from('debts')
+        .select('*')
+        .eq('id', parsed.data.debt_id)
+        .eq('household_id', auth.context.householdId)
+        .single();
+
+      if (debt) {
+        const newBalance = Math.max(0, Number(debt.outstanding_balance) - parsed.data.amount);
+        let payoffDate = debt.projected_payoff_date;
+        if (debt.minimum_payment && debt.interest_rate !== null) {
+          payoffDate = calculatePayoffDate(
+            newBalance,
+            Number(debt.interest_rate || 0),
+            Number(debt.minimum_payment),
+          );
+        }
+
+        isPayoff = newBalance <= 0;
+
+        await supabase
+          .from('debts')
+          .update({
+            outstanding_balance: newBalance,
+            projected_payoff_date: payoffDate,
+            is_active: !isPayoff,
+          })
+          .eq('id', parsed.data.debt_id);
+
+        if (isPayoff) {
+          await createDebtPayoffNotification(auth.context.householdId, debt.name);
+        }
+      }
+    }
+
+    return NextResponse.json({ data, isPayoff }, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

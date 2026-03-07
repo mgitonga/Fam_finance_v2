@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -8,14 +9,23 @@ import {
 } from '@/lib/validations/transaction';
 import { useAccounts } from '@/hooks/use-accounts';
 import { useCategories } from '@/hooks/use-categories';
+import { useDebts } from '@/hooks/use-debts';
 import { PAYMENT_METHODS } from '@/lib/constants';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X, Link2 } from 'lucide-react';
 
 type CategoryWithChildren = {
   id: string;
   name: string;
   type: string;
   children?: { id: string; name: string; type: string }[];
+};
+
+type Debt = {
+  id: string;
+  name: string;
+  outstanding_balance: number;
+  minimum_payment: number | null;
+  type: string;
 };
 
 interface TransactionFormProps {
@@ -33,11 +43,15 @@ export function TransactionForm({
 }: TransactionFormProps) {
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
+  const { data: debts } = useDebts();
+
+  const [isDebtRepayment, setIsDebtRepayment] = useState(!!defaultValues?.debt_id);
 
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateTransactionInput>({
     resolver: zodResolver(createTransactionSchema),
@@ -51,11 +65,52 @@ export function TransactionForm({
       merchant: '',
       payment_method: null,
       notes: '',
+      debt_id: null,
       ...defaultValues,
     },
   });
 
   const txnType = watch('type');
+  const selectedDebtId = watch('debt_id');
+
+  // Find the selected debt for validation display
+  const selectedDebt = debts?.find((d: Debt) => d.id === selectedDebtId);
+
+  // Auto-fill when a debt is selected
+  useEffect(() => {
+    if (!selectedDebtId || !debts) return;
+    const debt = debts.find((d: Debt) => d.id === selectedDebtId);
+    if (!debt) return;
+
+    // Auto-fill amount with minimum payment if available
+    if (debt.minimum_payment) {
+      setValue('amount', Number(debt.minimum_payment));
+    }
+
+    // Auto-fill description
+    setValue('description', `${debt.name} payment`);
+
+    // Force expense type for debt repayment
+    setValue('type', 'expense');
+
+    // Auto-fill category — find a Loans sub-category
+    if (categories) {
+      const loansParent = categories.find(
+        (c: CategoryWithChildren) => c.name === 'Loans' && !!(c.children && c.children.length > 0),
+      );
+      if (loansParent?.children?.[0]) {
+        setValue('category_id', loansParent.children[0].id);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDebtId]);
+
+  // When toggling off debt repayment, clear debt_id
+  useEffect(() => {
+    if (!isDebtRepayment) {
+      setValue('debt_id', null);
+    }
+  }, [isDebtRepayment, setValue]);
 
   // Filter categories based on transaction type
   const filteredCategories = categories?.filter(
@@ -92,11 +147,59 @@ export function TransactionForm({
             className="mt-1 block w-full rounded-md border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"
             data-testid="txn-type"
             {...register('type')}
+            disabled={isDebtRepayment}
           >
             <option value="expense">Expense</option>
             <option value="income">Income</option>
           </select>
         </div>
+
+        {/* Debt Repayment Toggle */}
+        {txnType === 'expense' && (
+          <div className="flex items-end sm:col-span-1">
+            <label className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">
+              <input
+                type="checkbox"
+                checked={isDebtRepayment}
+                onChange={(e) => setIsDebtRepayment(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+                data-testid="debt-repayment-toggle"
+              />
+              <Link2 className="h-4 w-4 text-blue-500" />
+              Debt Repayment
+            </label>
+          </div>
+        )}
+
+        {/* Debt Picker */}
+        {isDebtRepayment && (
+          <div className={txnType === 'expense' ? '' : 'sm:col-span-2'}>
+            <label htmlFor="debt_id" className="block text-sm font-medium">
+              Select Debt
+            </label>
+            <select
+              id="debt_id"
+              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"
+              data-testid="txn-debt"
+              {...register('debt_id')}
+            >
+              <option value="">Choose a debt...</option>
+              {debts
+                ?.filter((d: Debt) => Number(d.outstanding_balance) > 0)
+                .map((d: Debt) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} — KES {Number(d.outstanding_balance).toLocaleString()} remaining
+                  </option>
+                ))}
+            </select>
+            {selectedDebt && (
+              <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                Linked to: {selectedDebt.name} (KES{' '}
+                {Number(selectedDebt.outstanding_balance).toLocaleString()} remaining)
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Amount */}
         <div>
@@ -114,6 +217,12 @@ export function TransactionForm({
             {...register('amount', { valueAsNumber: true })}
           />
           {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount.message}</p>}
+          {selectedDebt && watch('amount') > Number(selectedDebt.outstanding_balance) && (
+            <p className="mt-1 text-xs text-red-500">
+              Amount exceeds outstanding balance of KES{' '}
+              {Number(selectedDebt.outstanding_balance).toLocaleString()}
+            </p>
+          )}
         </div>
 
         {/* Date */}

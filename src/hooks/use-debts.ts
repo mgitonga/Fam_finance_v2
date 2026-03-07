@@ -1,7 +1,11 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateDebtInput, LogDebtPaymentInput } from '@/lib/validations/savings-debt';
+import type {
+  CreateDebtInput,
+  UpdateDebtInput,
+  LogDebtPaymentInput,
+} from '@/lib/validations/savings-debt';
 
 const KEY = ['debts'];
 
@@ -22,6 +26,22 @@ export function useCreateDebt() {
     mutationFn: async (data: CreateDebtInput) => {
       const res = await fetch('/api/debts', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      return res.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+export function useUpdateDebt() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateDebtInput }) => {
+      const res = await fetch(`/api/debts/${id}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
@@ -59,6 +79,19 @@ export function useLogDebtPayment() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY });
       qc.invalidateQueries({ queryKey: ['accounts'] });
+      qc.invalidateQueries({ queryKey: ['transactions'] });
     },
+  });
+}
+
+export function useDebtPayments(debtId: string | null) {
+  return useQuery({
+    queryKey: ['debt-payments', debtId],
+    queryFn: async () => {
+      const res = await fetch(`/api/debts/${debtId}/payments`);
+      if (!res.ok) throw new Error('Failed to fetch payments');
+      return res.json();
+    },
+    enabled: !!debtId,
   });
 }

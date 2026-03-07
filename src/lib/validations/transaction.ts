@@ -16,6 +16,7 @@ export const createTransactionSchema = z.object({
   notes: z.string().max(1000).nullable().optional(),
   split_with: z.string().uuid().nullable().optional(),
   split_ratio: z.number().min(0).max(1).nullable().optional(),
+  debt_id: z.string().uuid().nullable().optional(),
 });
 
 export const updateTransactionSchema = createTransactionSchema.partial();

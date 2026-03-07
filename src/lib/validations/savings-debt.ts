@@ -53,6 +53,10 @@ export const updateDebtSchema = createDebtSchema.partial();
 export const logDebtPaymentSchema = z.object({
   amount: z.number().positive('Payment amount must be greater than 0'),
   account_id: z.string().uuid('Please select an account'),
+  category_id: z.string().uuid().optional(),
+  date: z.string().optional(),
+  description: z.string().max(500).optional(),
+  payment_method: z.enum(['cash', 'card', 'mobile_money', 'bank_transfer', 'other']).optional(),
 });
 
 export type CreateDebtInput = z.infer<typeof createDebtSchema>;

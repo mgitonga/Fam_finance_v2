@@ -2,15 +2,9 @@
 
 import { useState } from 'react';
 import { useDashboard } from '@/hooks/use-dashboard';
-import { MetricCards } from '@/components/dashboard/metric-cards';
-import { RecentTransactions } from '@/components/dashboard/recent-transactions';
-import { UpcomingBills } from '@/components/dashboard/upcoming-bills';
-import { SavingsGoalsWidget } from '@/components/dashboard/savings-widget';
-import { AccountBalances } from '@/components/dashboard/account-balances';
-import { OverallBudgetWidget } from '@/components/dashboard/overall-budget-widget';
-import { BudgetProgress } from '@/components/dashboard/budget-progress';
-import { IncomeVsExpenseChart } from '@/components/charts/income-vs-expense';
-import { BudgetVsActualChart } from '@/components/charts/budget-vs-actual';
+import { useDashboardPreferences } from '@/hooks/use-dashboard-preferences';
+import { WidgetRenderer } from '@/components/dashboard/widget-renderer';
+import { CustomizeDialog } from '@/components/dashboard/customize-dialog';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 
 const MONTH_NAMES = [
@@ -33,6 +27,7 @@ export default function DashboardPage() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
   const { data, isLoading } = useDashboard(month, year);
+  const { data: preferences } = useDashboardPreferences();
 
   function prevMonth() {
     if (month === 1) {
@@ -71,7 +66,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6" data-testid="dashboard-page">
-      {/* Header with month selector */}
+      {/* Header with month selector and customize button */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
@@ -80,6 +75,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2" data-testid="month-selector">
+          <CustomizeDialog />
           <button
             onClick={prevMonth}
             className="rounded-md border p-2 hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -100,59 +96,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Row 1: Metric Cards */}
-      <MetricCards
-        totalIncome={metrics.totalIncome}
-        totalExpenses={metrics.totalExpenses}
-        netSavings={metrics.netSavings}
-        budgetRemaining={metrics.budgetRemaining}
+      {/* Dynamic widget layout */}
+      <WidgetRenderer
+        data={data}
+        metrics={{ ...metrics, overallBudget: metrics.overallBudget ?? null }}
+        preferences={preferences ?? null}
       />
-
-      {/* Row 2: Budget Progress + Income vs Expense chart */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div
-          className="rounded-lg border bg-white p-4 dark:border-gray-800 dark:bg-gray-900"
-          data-testid="budget-progress-widget"
-        >
-          <h3 className="mb-3 font-semibold">Monthly Spending vs Budget</h3>
-          {data?.budgetVsActual?.length > 0 ? (
-            <div className="space-y-3">
-              {data.budgetVsActual.map(
-                (b: { category: string; color: string; budget: number; spent: number }) => (
-                  <BudgetProgress
-                    key={b.category}
-                    categoryName={b.category}
-                    categoryColor={b.color}
-                    spent={b.spent}
-                    budget={b.budget}
-                  />
-                ),
-              )}
-            </div>
-          ) : (
-            <p className="py-4 text-center text-sm text-gray-500">No budgets set for this month</p>
-          )}
-        </div>
-        <IncomeVsExpenseChart income={metrics.totalIncome} expense={metrics.totalExpenses} />
-      </div>
-
-      {/* Row 3: Recent Transactions + Upcoming Bills */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <RecentTransactions transactions={data?.recentTransactions || []} />
-        <UpcomingBills bills={data?.upcomingBills || []} />
-      </div>
-
-      {/* Row 4: Savings Goals + Account Balances */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <SavingsGoalsWidget goals={data?.savingsGoals || []} />
-        <AccountBalances accounts={data?.accounts || []} />
-      </div>
-
-      {/* Row 5: Overall Budget + Budget vs Actual chart */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <OverallBudgetWidget spent={metrics.totalExpenses} budget={metrics.overallBudget} />
-        <BudgetVsActualChart data={data?.budgetVsActual || []} />
-      </div>
     </div>
   );
 }

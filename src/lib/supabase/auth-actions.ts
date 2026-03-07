@@ -100,15 +100,20 @@ export async function logout() {
 export async function forgotPassword(formData: { email: string }) {
   const supabase = await createClient();
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
   const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL ? '' : 'http://localhost:3000'}/auth/callback?next=/reset-password`,
+    redirectTo: `${siteUrl}/auth/callback?next=/reset-password`,
   });
 
   if (error) {
     return { error: error.message };
   }
 
-  return { success: 'Check your email for a password reset link.' };
+  return {
+    success:
+      "We've sent a password reset link to your email. Please check your inbox (and spam folder). The link expires in 1 hour.",
+  };
 }
 
 export async function resetPassword(formData: { password: string }) {
@@ -122,8 +127,10 @@ export async function resetPassword(formData: { password: string }) {
     return { error: error.message };
   }
 
+  // Sign out after password reset so user logs in with new credentials
+  await supabase.auth.signOut();
   revalidatePath('/', 'layout');
-  redirect('/dashboard');
+  redirect('/login?message=Password+updated+successfully.+Please+sign+in.');
 }
 
 export async function getUser() {

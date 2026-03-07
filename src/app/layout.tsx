@@ -16,6 +16,8 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'FamFin — Family Budget & Finance Tracking',
   description: 'Track your family finances, budgets, savings goals, and more.',

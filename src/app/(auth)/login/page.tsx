@@ -1,14 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { loginSchema, type LoginInput } from '@/lib/validations/auth';
 import { login } from '@/lib/supabase/auth-actions';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const successMessage = searchParams.get('message');
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -37,6 +48,15 @@ export default function LoginPage() {
         <h1 className="text-primary text-2xl font-bold">FamFin</h1>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Sign in to your account</p>
       </div>
+
+      {successMessage && (
+        <div
+          className="rounded-md bg-green-50 p-3 text-sm text-green-600 dark:bg-green-950 dark:text-green-400"
+          data-testid="login-success"
+        >
+          {successMessage}
+        </div>
+      )}
 
       {serverError && (
         <div

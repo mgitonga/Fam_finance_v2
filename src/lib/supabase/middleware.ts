@@ -32,7 +32,13 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/login', '/register', '/forgot-password', '/auth/callback'];
+  const publicRoutes = [
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/auth/callback',
+    '/reset-password',
+  ];
   const isPublicRoute = publicRoutes.some((route) => request.nextUrl.pathname.startsWith(route));
 
   // If user is not authenticated and trying to access a protected route
@@ -43,7 +49,13 @@ export async function updateSession(request: NextRequest) {
   }
 
   // If user is authenticated and trying to access auth pages, redirect to dashboard
-  if (user && isPublicRoute && request.nextUrl.pathname !== '/auth/callback') {
+  // Exclude /auth/callback (processing auth) and /reset-password (user needs to set new password)
+  if (
+    user &&
+    isPublicRoute &&
+    request.nextUrl.pathname !== '/auth/callback' &&
+    request.nextUrl.pathname !== '/reset-password'
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);

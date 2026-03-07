@@ -9,10 +9,29 @@ import {
   type CreateDebtInput,
   type LogDebtPaymentInput,
 } from '@/lib/validations/savings-debt';
-import { useDebts, useCreateDebt, useDeleteDebt, useLogDebtPayment } from '@/hooks/use-debts';
+import {
+  useDebts,
+  useCreateDebt,
+  useDeleteDebt,
+  useLogDebtPayment,
+  useDebtPayments,
+} from '@/hooks/use-debts';
 import { useAccounts } from '@/hooks/use-accounts';
+import { useCategories } from '@/hooks/use-categories';
 import { formatKES, formatDate } from '@/lib/utils';
-import { Loader2, Plus, Trash2, X, CreditCard, Calendar, TrendingDown } from 'lucide-react';
+import { PAYMENT_METHODS } from '@/lib/constants';
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  X,
+  CreditCard,
+  Calendar,
+  TrendingDown,
+  History,
+  ExternalLink,
+  PartyPopper,
+} from 'lucide-react';
 
 type Debt = {
   id: string;
@@ -27,6 +46,21 @@ type Debt = {
   projected_payoff_date: string | null;
 };
 
+type CategoryWithChildren = {
+  id: string;
+  name: string;
+  type: string;
+  children?: { id: string; name: string; type: string }[];
+};
+
+type Payment = {
+  id: string;
+  amount: number;
+  date: string;
+  description: string | null;
+  accounts: { name: string } | null;
+};
+
 const DEBT_TYPE_LABELS: Record<string, string> = {
   mortgage: 'Mortgage',
   car_loan: 'Car Loan',
@@ -39,11 +73,14 @@ const DEBT_TYPE_LABELS: Record<string, string> = {
 export default function DebtsPage() {
   const { data: debts, isLoading } = useDebts();
   const { data: accounts } = useAccounts();
+  const { data: categories } = useCategories();
   const createDebt = useCreateDebt();
   const deleteDebt = useDeleteDebt();
   const logPayment = useLogDebtPayment();
   const [showForm, setShowForm] = useState(false);
   const [payingDebtId, setPayingDebtId] = useState<string | null>(null);
+  const [historyDebtId, setHistoryDebtId] = useState<string | null>(null);
+  const [payoffCelebration, setPayoffCelebration] = useState<string | null>(null);
 
   const {
     register,
@@ -68,8 +105,20 @@ export default function DebtsPage() {
     formState: { errors: payErrors, isSubmitting: paySubmitting },
   } = useForm<LogDebtPaymentInput>({
     resolver: zodResolver(logDebtPaymentSchema),
-    defaultValues: { amount: 0, account_id: '' },
+    defaultValues: {
+      amount: 0,
+      account_id: '',
+      date: new Date().toISOString().split('T')[0],
+      description: '',
+      payment_method: 'bank_transfer',
+    },
   });
+
+  // Find a Loans sub-category for auto-fill
+  const loansParent = categories?.find(
+    (c: CategoryWithChildren) => c.name === 'Loans' && !!(c.children && c.children.length > 0),
+  );
+  const defaultLoanCategoryId = loansParent?.children?.[0]?.id;
 
   async function onCreateDebt(data: CreateDebtInput) {
     await createDebt.mutateAsync(data);
@@ -79,9 +128,24 @@ export default function DebtsPage() {
 
   async function onLogPayment(data: LogDebtPaymentInput) {
     if (!payingDebtId) return;
-    await logPayment.mutateAsync({ debtId: payingDebtId, data });
+    const payingDebt = (debts || []).find((d: Debt) => d.id === payingDebtId);
+
+    // Auto-fill category if not provided
+    const paymentData = {
+      ...data,
+      category_id: data.category_id || defaultLoanCategoryId,
+      description: data.description || `${payingDebt?.name || 'Debt'} payment`,
+    };
+
+    const result = await logPayment.mutateAsync({ debtId: payingDebtId, data: paymentData });
     resetPay();
     setPayingDebtId(null);
+
+    // Show payoff celebration if debt was fully paid
+    if (result?.isPayoff && payingDebt) {
+      setPayoffCelebration(payingDebt.name);
+      setTimeout(() => setPayoffCelebration(null), 5000);
+    }
   }
 
   // Summary
@@ -362,61 +426,189 @@ export default function DebtsPage() {
                   </div>
                 </div>
 
-                {/* Payment form */}
+                {/* Payment form — enhanced */}
                 {payingDebtId === debt.id && (
-                  <form
-                    onSubmit={submitPay(onLogPayment)}
-                    className="mt-3 flex flex-wrap gap-2 border-t pt-3"
-                  >
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="1"
-                      placeholder="Amount"
-                      className="w-32 rounded-md border px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
-                      {...regPay('amount', { valueAsNumber: true })}
-                    />
-                    <select
-                      className="rounded-md border px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
-                      {...regPay('account_id')}
-                    >
-                      <option value="">Account...</option>
-                      {accounts?.map((a: { id: string; name: string }) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="submit"
-                      disabled={paySubmitting}
-                      className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-                    >
-                      {paySubmitting ? '...' : 'Log Payment'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPayingDebtId(null);
-                        resetPay();
-                      }}
-                      className="rounded-md border px-3 py-1.5 text-xs"
-                    >
-                      Cancel
-                    </button>
-                    {payErrors.amount && (
-                      <p className="w-full text-xs text-red-500">{payErrors.amount.message}</p>
-                    )}
-                    {payErrors.account_id && (
-                      <p className="w-full text-xs text-red-500">{payErrors.account_id.message}</p>
-                    )}
+                  <form onSubmit={submitPay(onLogPayment)} className="mt-3 space-y-3 border-t pt-3">
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500">Amount</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="1"
+                          max={Number(debt.outstanding_balance)}
+                          placeholder="Amount"
+                          className="mt-1 w-full rounded-md border px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+                          {...regPay('amount', { valueAsNumber: true })}
+                        />
+                        {payErrors.amount && (
+                          <p className="mt-0.5 text-xs text-red-500">{payErrors.amount.message}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500">Account</label>
+                        <select
+                          className="mt-1 w-full rounded-md border px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+                          {...regPay('account_id')}
+                        >
+                          <option value="">Account...</option>
+                          {accounts?.map((a: { id: string; name: string }) => (
+                            <option key={a.id} value={a.id}>
+                              {a.name}
+                            </option>
+                          ))}
+                        </select>
+                        {payErrors.account_id && (
+                          <p className="mt-0.5 text-xs text-red-500">
+                            {payErrors.account_id.message}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500">Date</label>
+                        <input
+                          type="date"
+                          className="mt-1 w-full rounded-md border px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+                          {...regPay('date')}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500">
+                          Payment Method
+                        </label>
+                        <select
+                          className="mt-1 w-full rounded-md border px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+                          {...regPay('payment_method')}
+                        >
+                          {PAYMENT_METHODS.map((pm) => (
+                            <option key={pm.value} value={pm.value}>
+                              {pm.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500">Description</label>
+                      <input
+                        type="text"
+                        placeholder={`${debt.name} payment`}
+                        className="mt-1 w-full rounded-md border px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+                        {...regPay('description')}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={paySubmitting}
+                        className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                      >
+                        {paySubmitting ? '...' : 'Log Payment'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPayingDebtId(null);
+                          resetPay();
+                        }}
+                        className="rounded-md border px-3 py-1.5 text-xs"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </form>
                 )}
+
+                {/* Payment history toggle & display */}
+                <div className="mt-3 border-t pt-2">
+                  <button
+                    onClick={() => setHistoryDebtId(historyDebtId === debt.id ? null : debt.id)}
+                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  >
+                    <History className="h-3 w-3" />
+                    {historyDebtId === debt.id ? 'Hide' : 'Show'} Payment History
+                  </button>
+                  {historyDebtId === debt.id && <DebtPaymentHistory debtId={debt.id} />}
+                </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Payoff celebration banner */}
+      {payoffCelebration && (
+        <div className="fixed inset-x-0 top-4 z-50 mx-auto max-w-md animate-bounce rounded-lg border border-green-300 bg-green-50 p-4 text-center shadow-lg dark:border-green-800 dark:bg-green-950">
+          <div className="flex items-center justify-center gap-2">
+            <PartyPopper className="h-6 w-6 text-green-600" />
+            <div>
+              <p className="font-bold text-green-800 dark:text-green-200">Debt Paid Off!</p>
+              <p className="text-sm text-green-600 dark:text-green-400">
+                Congratulations! You&apos;ve fully paid off &ldquo;{payoffCelebration}&rdquo;!
+              </p>
+            </div>
+            <PartyPopper className="h-6 w-6 text-green-600" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Sub-component for showing payment history for a single debt */
+function DebtPaymentHistory({ debtId }: { debtId: string }) {
+  const { data, isLoading } = useDebtPayments(debtId);
+
+  if (isLoading) {
+    return (
+      <div className="mt-2 flex items-center gap-1 text-xs text-gray-400">
+        <Loader2 className="h-3 w-3 animate-spin" /> Loading...
+      </div>
+    );
+  }
+
+  const payments: Payment[] = data?.payments || [];
+
+  return (
+    <div className="mt-2 space-y-1">
+      {payments.length === 0 ? (
+        <p className="text-xs text-gray-400">No payments recorded yet.</p>
+      ) : (
+        <>
+          <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
+            <span>
+              {data?.paymentCount} payment{data?.paymentCount !== 1 ? 's' : ''} — Total:{' '}
+              {formatKES(data?.totalPaid || 0)}
+            </span>
+            <a
+              href={`/transactions?debt_id=${debtId}`}
+              className="flex items-center gap-1 text-blue-500 hover:underline"
+            >
+              View all <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+          {payments.slice(0, 5).map((p: Payment) => (
+            <div
+              key={p.id}
+              className="flex items-center justify-between rounded bg-gray-50 px-2 py-1 text-xs dark:bg-gray-800"
+            >
+              <div>
+                <span className="font-medium">{formatDate(p.date)}</span>
+                <span className="ml-2 text-gray-500">{p.description || '—'}</span>
+              </div>
+              <span className="font-semibold text-red-600">-{formatKES(p.amount)}</span>
+            </div>
+          ))}
+          {payments.length > 5 && (
+            <a
+              href={`/transactions?debt_id=${debtId}`}
+              className="block text-center text-xs text-blue-500 hover:underline"
+            >
+              + {payments.length - 5} more payments
+            </a>
+          )}
+        </>
+      )}
     </div>
   );
 }

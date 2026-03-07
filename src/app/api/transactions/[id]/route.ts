@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getAuthContext } from '@/lib/supabase/auth-helpers';
 import { updateTransactionSchema } from '@/lib/validations/transaction';
+import { calculatePayoffDate } from '@/lib/validations/savings-debt';
+import { createDebtPayoffNotification } from '@/lib/notifications';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -99,6 +103,43 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         .eq('id', accountId);
     }
 
+    // Handle debt balance adjustments
+    const oldDebtId = existing.debt_id;
+    const newDebtId = parsed.data.debt_id !== undefined ? parsed.data.debt_id : oldDebtId;
+
+    // If debt link is being removed, restore amount to old debt
+    if (oldDebtId && !newDebtId) {
+      await adjustDebtBalance(
+        supabase,
+        oldDebtId,
+        existing.amount,
+        'restore',
+        auth.context.householdId,
+      );
+    }
+    // If debt link is being added to a new debt
+    else if (!oldDebtId && newDebtId) {
+      await adjustDebtBalance(supabase, newDebtId, -newAmount, 'reduce', auth.context.householdId);
+    }
+    // If debt link is changing to a different debt
+    else if (oldDebtId && newDebtId && oldDebtId !== newDebtId) {
+      await adjustDebtBalance(
+        supabase,
+        oldDebtId,
+        existing.amount,
+        'restore',
+        auth.context.householdId,
+      );
+      await adjustDebtBalance(supabase, newDebtId, -newAmount, 'reduce', auth.context.householdId);
+    }
+    // If same debt but amount changed
+    else if (oldDebtId && newDebtId && oldDebtId === newDebtId) {
+      const delta = existing.amount - newAmount; // positive means reduced payment, negative means increased payment
+      if (delta !== 0) {
+        await adjustDebtBalance(supabase, oldDebtId, delta, 'adjust', auth.context.householdId);
+      }
+    }
+
     return NextResponse.json({ data });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -152,8 +193,64 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
         .eq('id', existing.account_id);
     }
 
+    // If the deleted transaction was linked to a debt, restore the amount
+    if (existing.debt_id) {
+      await adjustDebtBalance(
+        supabase,
+        existing.debt_id,
+        existing.amount,
+        'restore',
+        auth.context.householdId,
+      );
+    }
+
     return NextResponse.json({ message: 'Transaction deleted' });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+/**
+ * Helper to adjust a debt's outstanding balance when a linked transaction is modified or deleted.
+ * - 'restore': adds amount back (delete / unlink)
+ * - 'reduce': subtracts amount (new link)
+ * - 'adjust': adds delta (edit — positive delta means payment decreased so balance goes up)
+ */
+async function adjustDebtBalance(
+  supabase: SupabaseClient<Database>,
+  debtId: string,
+  amount: number,
+  _action: 'restore' | 'reduce' | 'adjust',
+  householdId: string,
+) {
+  const { data: debt } = await supabase.from('debts').select('*').eq('id', debtId).single();
+
+  if (!debt) return;
+
+  const newBalance = Math.max(0, Number(debt.outstanding_balance) + amount);
+  let payoffDate = debt.projected_payoff_date;
+  if (debt.minimum_payment && debt.interest_rate !== null) {
+    payoffDate = calculatePayoffDate(
+      newBalance,
+      Number(debt.interest_rate || 0),
+      Number(debt.minimum_payment),
+    );
+  }
+
+  const isPayoff = newBalance <= 0;
+  const wasInactive = !debt.is_active;
+
+  await supabase
+    .from('debts')
+    .update({
+      outstanding_balance: newBalance,
+      projected_payoff_date: payoffDate,
+      is_active: !isPayoff,
+    })
+    .eq('id', debtId);
+
+  // If debt just got paid off, send notification
+  if (isPayoff && !wasInactive) {
+    await createDebtPayoffNotification(householdId, debt.name);
   }
 }

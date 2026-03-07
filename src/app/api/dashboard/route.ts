@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       // Debts
       supabase
         .from('debts')
-        .select('id, name, outstanding_balance, minimum_payment')
+        .select('id, name, outstanding_balance, original_amount, minimum_payment')
         .eq('household_id', hid)
         .eq('is_active', true),
       // Recent transactions (last 10)
@@ -192,6 +192,7 @@ export async function GET(request: NextRequest) {
         upcomingBills,
         savingsGoals: savingsRes.data || [],
         accounts,
+        debts: debtsRes.data || [],
         month,
         year,
       },

@@ -1,13 +1,27 @@
 'use client';
 
+import { useSyncExternalStore } from 'react';
 import { useTheme } from 'next-themes';
 import { Sun, Moon, Monitor } from 'lucide-react';
 
-export function ThemeToggle() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
+const emptySubscribe = () => () => {};
 
-  // During SSR/hydration, resolvedTheme may be undefined
-  if (!resolvedTheme) return null;
+export function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
+
+  // Render a placeholder during SSR to avoid hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="flex items-center gap-1 rounded-lg border p-1 dark:border-gray-700">
+        <div className="h-7 w-[104px]" />
+      </div>
+    );
+  }
 
   const options = [
     { value: 'light', icon: Sun, label: 'Light' },

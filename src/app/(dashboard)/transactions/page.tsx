@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   useTransactions,
   useCreateTransaction,
@@ -9,6 +10,7 @@ import {
 } from '@/hooks/use-transactions';
 import { useAccounts } from '@/hooks/use-accounts';
 import { useCategories } from '@/hooks/use-categories';
+import { useDebts } from '@/hooks/use-debts';
 import { TransactionForm } from '@/components/forms/transaction-form';
 import { formatKES, formatDate } from '@/lib/utils';
 import { PAYMENT_METHODS } from '@/lib/constants';
@@ -23,6 +25,7 @@ import {
   ArrowUpDown,
   Search,
   Filter,
+  Link2,
 } from 'lucide-react';
 
 type Transaction = {
@@ -36,13 +39,23 @@ type Transaction = {
   user_id: string;
   account_id: string;
   category_id: string;
+  debt_id: string | null;
   notes: string | null;
   tags: string[] | null;
   categories: { name: string; color: string | null } | null;
   accounts: { name: string } | null;
 };
 
+type Debt = {
+  id: string;
+  name: string;
+  outstanding_balance: number;
+};
+
 export default function TransactionsPage() {
+  const searchParams = useSearchParams();
+  const debtIdParam = searchParams.get('debt_id');
+
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -52,7 +65,12 @@ export default function TransactionsPage() {
   const [filterType, setFilterType] = useState('');
   const [filterAccount, setFilterAccount] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [filterDebt, setFilterDebt] = useState(debtIdParam || '');
+  const [showFilters, setShowFilters] = useState(!!debtIdParam);
+
+  // Sync debt filter from URL param (derived, not via effect)
+  const effectiveDebtFilter = debtIdParam || filterDebt;
+  const effectiveShowFilters = showFilters || !!debtIdParam;
 
   const { data: result, isLoading } = useTransactions({
     page,
@@ -62,10 +80,12 @@ export default function TransactionsPage() {
     type: filterType || undefined,
     account_id: filterAccount || undefined,
     category_id: filterCategory || undefined,
+    debt_id: effectiveDebtFilter || undefined,
   });
 
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
+  const { data: debts } = useDebts();
   const createTransaction = useCreateTransaction();
   const updateTransaction = useUpdateTransaction();
   const deleteTransaction = useDeleteTransaction();
@@ -149,6 +169,7 @@ export default function TransactionsPage() {
                     payment_method:
                       editingTx.payment_method as CreateTransactionInput['payment_method'],
                     notes: editingTx.notes,
+                    debt_id: editingTx.debt_id,
                   }
                 : undefined
             }
@@ -176,7 +197,7 @@ export default function TransactionsPage() {
           />
         </div>
         <button
-          onClick={() => setShowFilters(!showFilters)}
+          onClick={() => setShowFilters(!effectiveShowFilters)}
           className="flex items-center gap-1 rounded-md border px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
           data-testid="toggle-filters"
         >
@@ -184,7 +205,7 @@ export default function TransactionsPage() {
         </button>
       </div>
 
-      {showFilters && (
+      {effectiveShowFilters && (
         <div className="mt-2 flex flex-wrap gap-2" data-testid="filter-bar">
           <select
             value={filterType}
@@ -228,12 +249,28 @@ export default function TransactionsPage() {
               </option>
             ))}
           </select>
-          {(filterType || filterAccount || filterCategory) && (
+          <select
+            value={filterDebt}
+            onChange={(e) => {
+              setFilterDebt(e.target.value);
+              setPage(1);
+            }}
+            className="rounded-md border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"
+          >
+            <option value="">All Debts</option>
+            {debts?.map((d: Debt) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+          {(filterType || filterAccount || filterCategory || filterDebt) && (
             <button
               onClick={() => {
                 setFilterType('');
                 setFilterAccount('');
                 setFilterCategory('');
+                setFilterDebt('');
                 setPage(1);
               }}
               className="rounded-md border px-3 py-2 text-sm text-red-500 hover:bg-red-50"
@@ -299,6 +336,12 @@ export default function TransactionsPage() {
                       <div>
                         <p className="font-medium">{tx.description || '—'}</p>
                         {tx.merchant && <p className="text-xs text-gray-500">{tx.merchant}</p>}
+                        {tx.debt_id && (
+                          <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                            <Link2 className="h-3 w-3" />
+                            Debt Payment
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-3">

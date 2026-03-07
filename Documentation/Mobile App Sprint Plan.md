@@ -6,16 +6,16 @@
 
 | Field             | Value                                  |
 | ----------------- | -------------------------------------- |
-| Document Version  | 2.0                                    |
-| Date              | March 5, 2026                          |
-| Plan Reference    | Mobile App Plan v1.0                   |
+| Document Version  | 3.0                                    |
+| Date              | March 8, 2026                          |
+| Plan Reference    | Mobile App Plan v3.0                   |
 | Sprint Cadence    | 1-week sprints (Monday → Friday)       |
-| Total Sprints     | 15 (S0–S14)                            |
+| Total Sprints     | 16 (S0–S15)                            |
 | Team              | 1 developer                            |
 | Estimation        | Fibonacci story points (1, 2, 3, 5, 8) |
 | Target Velocity   | ~20 pts/sprint                         |
 | Start Date        | March 9, 2026                          |
-| Target Completion | June 19, 2026                          |
+| Target Completion | June 26, 2026                          |
 
 ---
 
@@ -32,13 +32,14 @@
 | S6     | Phase 2  | Transaction list + filters           | 22      |
 | S7     | Phase 2  | Transaction CRUD + receipt upload    | 21      |
 | S8     | Phase 2  | Budgets + Bills screens              | 22      |
-| S9     | Phase 2  | More tab, Settings, Notifications    | 19      |
-| S10    | Phase 3  | Push notifications + biometrics      | 23      |
-| S11    | Phase 3  | Camera receipts + offline (read)     | 22      |
-| S12    | Phase 3  | Offline (write/sync) + widgets       | 22      |
-| S13    | Phase 4  | Polish, animations, accessibility    | 20      |
-| S14    | Phase 4  | E2E tests, store assets, submit      | 16      |
-|        |          | **Total**                            | **318** |
+| S9     | Phase 2  | Debt Tracking screens                | 22      |
+| S10    | Phase 2  | More tab, Settings, Notifications    | 19      |
+| S11    | Phase 3  | Push notifications + biometrics      | 23      |
+| S12    | Phase 3  | Camera receipts + offline (read)     | 22      |
+| S13    | Phase 3  | Offline (write/sync) + widgets       | 22      |
+| S14    | Phase 4  | Polish, animations, accessibility    | 20      |
+| S15    | Phase 4  | E2E tests, store assets, submit      | 16      |
+|        |          | **Total**                            | **340** |
 
 > **Testing Policy:** Every sprint includes a dedicated testing task for that sprint’s deliverables. Unit/integration tests are written alongside features, not backloaded. Sprint 14 focuses on E2E tests and a final coverage audit. Minimum per-sprint coverage targets are specified in each sprint’s testing task. **Global minimum: ≥80% test coverage across all mobile code by Sprint 14.**
 
@@ -54,19 +55,20 @@
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
 | 0.1 | Write API integration tests for `getAuthContext()` — test valid session, no session, expired session paths                                            | 3      |
 | 0.2 | Write API integration tests for 5 core route groups: `dashboard`, `transactions` (list + create), `budgets` (list + create), `accounts`, `categories` | 5      |
-| 0.3 | Write 5 Playwright E2E smoke tests: login, view dashboard, create transaction, view budgets, logout                                                   | 5      |
+| 0.3 | Verify existing 7 Playwright E2E test files pass (auth, dashboard, transactions, budgets, debts, settings, navigation); extend coverage if gaps found | 3      |
 | 0.4 | Verify and document current deployment: confirm Vercel project settings (root directory, env vars, build command), screenshot current config          | 1      |
 | 0.5 | Add `.nvmrc` (Node 20) and `engines` field to `package.json`; ensure CI and local dev use consistent Node version                                     | 1      |
 | 0.6 | Add explicit `OPTIONS` handler for `/api/*` routes — verify Vercel handles preflight correctly (test with `curl -X OPTIONS`); document findings       | 2      |
 | 0.7 | Run full test suite (existing + new) and confirm green baseline; commit as "pre-restructure test baseline"                                            | 1      |
 
-**Sprint Total: 18 points**
+**Sprint Total: 16 points**
 
 ### Acceptance Criteria
 
 - [ ] `getAuthContext()` integration tests cover: valid cookie session → 200 with correct `{userId, householdId, role}`, no session → 401 JSON, expired session → 401 JSON
 - [ ] API integration tests pass for dashboard, transactions, budgets, accounts, categories — each verifies HTTP status + response shape
-- [ ] 5 Playwright E2E tests pass: login flow completes, dashboard loads with data, transaction creation succeeds and appears in list, budgets page loads, logout redirects to login
+- [ ] Existing 7 Playwright E2E test files pass: auth, dashboard, transactions, budgets, debts, settings, navigation
+- [ ] Debt-related E2E tests included in regression baseline
 - [ ] Vercel deployment configuration documented: root directory, environment variables, build command, Node version
 - [ ] `.nvmrc` file exists with `20`; `package.json` has `"engines": { "node": ">=20" }`
 - [ ] `OPTIONS` request to `/api/dashboard` returns correct CORS headers (or behavior documented for Vercel edge)
@@ -79,20 +81,21 @@
 
 **Phase 0 · Week of March 16, 2026**
 
-| #    | Task                                                                                                                             | Points |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 1.1  | Move existing Next.js app into `apps/web/` directory; update all path references                                                 | 5      |
-| 1.2  | Create `pnpm-workspace.yaml` with `packages:` field declaring `apps/*` and `packages/*` workspaces (current file has none)       | 1      |
-| 1.3  | Create `packages/shared/` with `package.json` (`@famfin/shared`), `tsconfig.json`, barrel `index.ts`                             | 3      |
-| 1.4  | Extract all Zod validation schemas (`src/lib/validations/*.ts`) into `packages/shared/validations/`                              | 3      |
-| 1.5  | Extract database types (`src/types/database.ts`) and constants (`src/lib/constants.ts`) into shared                              | 2      |
-| 1.6  | Extract portable utility functions (`formatKES()`, `formatDate()`) into shared; leave `cn()` (clsx/tailwind-merge) in `apps/web` | 1      |
-| 1.7  | Create `queryKeys.ts` factory in shared — extract all query key patterns from `src/hooks/`                                       | 2      |
-| 1.8  | Refactor all `apps/web/` imports to use `@famfin/shared`; fix any TS errors                                                      | 2      |
-| 1.9  | Update CI/CD: Vercel project root → `apps/web/`, GitHub Actions workflow paths, verify web deploy from new structure             | 2      |
-| 1.10 | Unit tests for `@famfin/shared` exports: schema validation, utility functions, constants, query key factory (≥90% coverage)      | 2      |
+| #    | Task                                                                                                                                                      | Points |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 1.1  | Move existing Next.js app into `apps/web/` directory; update all path references                                                                          | 5      |
+| 1.2  | Create `pnpm-workspace.yaml` with `packages:` field declaring `apps/*` and `packages/*` workspaces (current file has none)                                | 1      |
+| 1.3  | Create `packages/shared/` with `package.json` (`@famfin/shared`), `tsconfig.json`, barrel `index.ts`                                                      | 3      |
+| 1.4  | Extract all Zod validation schemas (`src/lib/validations/*.ts`) into `packages/shared/validations/`                                                       | 3      |
+| 1.5  | Extract database types (`src/types/database.ts` with `debt_id`, `reminder_days_before`) and constants (`src/lib/constants.ts`) into shared                | 2      |
+| 1.6  | Extract portable utility functions (`formatKES()`, `formatDate()`, `calculatePayoffDate()`) into shared; leave `cn()` (clsx/tailwind-merge) in `apps/web` | 1      |
+| 1.7  | Extract `DASHBOARD_WIDGETS` array, `getDefaultPreferences()`, `getWidgetDefinition()` from `src/lib/dashboard-widgets.ts` into shared                     | 2      |
+| 1.8  | Create `queryKeys.ts` factory in shared — extract all query key patterns from `src/hooks/`                                                                | 2      |
+| 1.9  | Refactor all `apps/web/` imports to use `@famfin/shared`; fix any TS errors                                                                               | 2      |
+| 1.10 | Update CI/CD: Vercel project root → `apps/web/`, GitHub Actions workflow paths, verify web deploy from new structure                                      | 2      |
+| 1.11 | Unit tests for `@famfin/shared` exports: schema validation, utility functions, constants, query key factory, widget registry (≥90% coverage)              | 2      |
 
-**Sprint Total: 23 points**
+**Sprint Total: 25 points**
 
 ### Acceptance Criteria
 
@@ -100,7 +103,7 @@
 - [ ] `pnpm install` succeeds from monorepo root with no errors
 - [ ] `pnpm --filter web build` completes successfully (web app builds)
 - [ ] `pnpm --filter web test` passes — all existing unit/integration tests green
-- [ ] `@famfin/shared` exports: all Zod schemas, database types, constants, utility functions, query key factory
+- [ ] `@famfin/shared` exports: all Zod schemas (incl. `debt_id` field), database types, constants, utility functions, query key factory, `DASHBOARD_WIDGETS`, `getDefaultPreferences()`, `calculatePayoffDate()`
 - [ ] `apps/web/` has zero local imports of moved modules — all reference `@famfin/shared`
 - [ ] TypeScript compilation succeeds with `--noEmit` across all workspaces
 - [ ] Web app runs locally (`pnpm --filter web dev`) and all pages function identically to pre-restructure
@@ -158,12 +161,12 @@
 | 3.1 | Create `api-client.ts` — fetch wrapper with base URL, token injection via `supabase.auth.getSession()` (not stale SecureStore token), 401 handling, expired refresh token detection, JSON parsing                        | 5      |
 | 3.2 | Create auth provider with Supabase JS + SecureStore: `signIn`, `signUp` (via `POST /api/auth/register`), `signOut`, `resetPassword`, `onAuthStateChange`, `TOKEN_REFRESHED` persistence, `AppState` resume session check | 5      |
 | 3.3 | Implement auth navigation gate: unauthenticated → `(auth)`, authenticated with no household → create/join household screen, authenticated → `(tabs)`; handle invitation deep links                                       | 4      |
-| 3.4 | Rewrite `use-dashboard.ts` for mobile — uses API client with absolute URL + Bearer auth (web hooks use relative `fetch('/api/...')` with implicit cookies and cannot be shared)                                          | 2      |
-| 3.5 | Rewrite `use-transactions.ts` for mobile (queries + all mutations: create, update, delete, upload)                                                                                                                       | 2      |
-| 3.6 | Rewrite remaining hooks for mobile: `use-accounts`, `use-budgets`, `use-bills`, `use-categories`, `use-notifications`                                                                                                    | 2      |
+| 3.4 | Rewrite `use-dashboard.ts` and `use-dashboard-preferences.ts` for mobile — uses API client with absolute URL + Bearer auth                                                                                               | 3      |
+| 3.5 | Rewrite `use-transactions.ts` for mobile (queries + all mutations: create, update, delete, upload; includes `debt_id` filter support)                                                                                    | 2      |
+| 3.6 | Rewrite remaining hooks for mobile: `use-accounts`, `use-budgets`, `use-bills`, `use-categories`, `use-notifications`, `use-debts` (CRUD, payment logging, payment history), `use-savings`                               | 4      |
 | 3.7 | Unit tests: API client (mock fetch, token refresh, 401 handling), auth provider logic (sign-in/out, session expiry), household gate (≥80% coverage)                                                                      | 2      |
 
-**Sprint Total: 22 points**
+**Sprint Total: 25 points**
 
 ### Acceptance Criteria
 
@@ -181,7 +184,8 @@
 - [ ] API client handles 401 by clearing session and redirecting to login
 - [ ] Dashboard hook returns data from API when called from a test component
 - [ ] Transaction hook can fetch paginated transactions from the API
-- [ ] All 6 ported hooks can successfully perform GET requests against the live API
+- [ ] All 12 ported hooks can successfully perform GET requests against the live API
+- [ ] Debt hook can fetch debts, log payments, and retrieve payment history
 - [ ] Unit tests pass for API client and auth provider with ≥80% coverage
 
 ---
@@ -225,27 +229,39 @@
 
 **Phase 2b · Week of April 13, 2026**
 
-| #    | Task                                                                                                              | Points |
-| ---- | ----------------------------------------------------------------------------------------------------------------- | ------ |
-| 5.1  | Build Dashboard screen layout — scrollable vertical layout with month/year selector at top                        | 2      |
-| 5.2  | Build `MetricCards` — horizontal ScrollView with 4 metric cards (income, expenses, net savings, budget remaining) | 3      |
-| 5.3  | Build `BudgetProgress` widget — list of category budgets with color-coded progress bars (green/amber/red)         | 3      |
-| 5.4  | Build `RecentTransactions` widget — last 5 transactions as touchable rows linking to detail                       | 2      |
-| 5.5  | Build `UpcomingBills` widget — card list with days-until-due badges                                               | 2      |
-| 5.6  | Build `AccountBalances` widget — card list showing all accounts and balances                                      | 2      |
-| 5.7  | Build `OverallBudgetWidget` — circular progress indicator (spent vs cap)                                          | 2      |
-| 5.8  | Build `IncomeVsExpense` chart using `victory-native` — grouped bar chart for current month                        | 3      |
-| 5.9  | Integrate all widgets with `useDashboard` hook; implement pull-to-refresh and loading skeletons                   | 2      |
-| 5.10 | Integration test: dashboard screen renders all widgets with mock data; month selector changes data                | 1      |
+| #    | Task                                                                                                                                                         | Points |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| 5.1  | Build Dashboard screen layout — scrollable vertical layout with month/year selector at top                                                                   | 2      |
+| 5.2  | Build `MetricCards` — horizontal ScrollView with 4 metric cards (income, expenses, net savings, budget remaining)                                            | 3      |
+| 5.3  | Build `BudgetVsActual` widget — bullet chart rows using RN `View` components (CSS-based, no chart library needed)                                            | 3      |
+| 5.4  | Build `OverallBudgetWidget` — circular progress indicator (spent vs cap)                                                                                     | 2      |
+| 5.5  | Build `RecentTransactions` widget — last 10 transactions as touchable rows linking to detail                                                                 | 2      |
+| 5.6  | Build `UpcomingBills` widget — card list with days-until-due badges                                                                                          | 2      |
+| 5.7  | Build `SavingsGoals` widget — progress bars toward savings targets                                                                                           | 2      |
+| 5.8  | Build `AccountBalances` widget — card list showing all accounts and balances                                                                                 | 2      |
+| 5.9  | Build `BudgetProgress` widget — per-category progress bars (green/amber/red)                                                                                 | 2      |
+| 5.10 | Build `DebtOverview` widget — debt cards with progress bars, total outstanding, monthly payments                                                             | 2      |
+| 5.11 | Build `IncomeVsExpense` chart using `victory-native` — grouped bar chart for current month                                                                   | 3      |
+| 5.12 | Build dashboard customize screen — `react-native-draggable-flatlist` for widget reorder + enable/disable toggles; persist via `useDashboardPreferences` hook | 3      |
+| 5.13 | Integrate all 10 widgets with `useDashboard` hook; implement pull-to-refresh and loading skeletons                                                           | 2      |
+| 5.14 | Integration test: dashboard screen renders all widgets with mock data; month selector changes data; customization persists                                   | 1      |
 
-**Sprint Total: 22 points**
+**Sprint Total: 31 points**
+
+> **Note:** This sprint is larger than average (31 pts vs ~22) due to the expanded widget count (10 vs original 7) and the addition of dashboard customization. Consider splitting into S5a (widgets 1–6 + chart) and S5b (widgets 7–10 + customization) if velocity is a concern.
 
 ### Acceptance Criteria
 
-- [ ] Dashboard loads data from `GET /api/dashboard?month=X&year=Y` and displays all 6 widgets + 1 chart
+- [ ] Dashboard loads data from `GET /api/dashboard?month=X&year=Y` and displays all 10 widgets + 1 chart
+- [ ] Dashboard preferences loaded from `GET /api/users/me/dashboard-preferences`; respects widget order and enabled/disabled state
+- [ ] Customize button opens sortable widget list; drag to reorder, toggle to enable/disable
+- [ ] Customization saved via `PUT /api/users/me/dashboard-preferences` and persists across app restarts
+- [ ] "Reset to defaults" restores default widget order and visibility
 - [ ] Month/year selector changes the data displayed across all widgets
 - [ ] Metric cards show correct totals matching the web dashboard for the same month
-- [ ] Budget progress bars use correct color coding: green (<70%), amber (70–90%), red (>90%) per `BUDGET_THRESHOLDS` constants
+- [ ] Budget vs Actual bullet chart shows category bars with target markers; colors: green (≤75%), amber (75–100%), red (>100%)
+- [ ] Debt Overview widget shows total debt, monthly payments, and per-debt progress bars
+- [ ] Savings Goals widget shows progress bars toward targets
 - [ ] Tapping a recent transaction navigates to transaction detail screen (placeholder OK)
 - [ ] Upcoming bills display `daysLeft` badge accurately
 - [ ] Overall budget widget shows circular progress with percentage
@@ -262,26 +278,29 @@
 
 **Phase 2c · Week of April 20, 2026**
 
-| #   | Task                                                                                                                                    | Points |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 6.1 | Build transaction list screen — `FlatList` with infinite scroll pagination (page + limit params)                                        | 5      |
-| 6.2 | Build transaction row component — date, description, amount (colored by type), category icon/name, account                              | 3      |
-| 6.3 | Build filter bottom sheet — type (income/expense), category picker, account picker, date range (from/to), payment method                | 5      |
-| 6.4 | Build search bar with debounced input (300ms) — searches description + merchant fields                                                  | 2      |
-| 6.5 | Build sort toggle — sort by date (default) or amount, ascending/descending                                                              | 2      |
-| 6.6 | Build swipe-to-delete with confirmation alert on transaction rows                                                                       | 3      |
-| 6.7 | Integration tests: transaction list renders with mock data, infinite scroll loads pages, filter params sent correctly, search debounces | 2      |
+| #   | Task                                                                                                                                                            | Points |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 6.1 | Build transaction list screen — `FlatList` with infinite scroll pagination (page + limit params)                                                                | 5      |
+| 6.2 | Build transaction row component — date, description, amount (colored by type), category icon/name, account; **"Debt Payment" badge** when `debt_id` is non-null | 3      |
+| 6.3 | Build filter bottom sheet — type (income/expense), category picker, account picker, date range (from/to), payment method, **debt picker**                       | 5      |
+| 6.4 | Build search bar with debounced input (300ms) — searches description + merchant fields                                                                          | 2      |
+| 6.5 | Build sort toggle — sort by date (default) or amount, ascending/descending                                                                                      | 2      |
+| 6.6 | Build swipe-to-delete with confirmation alert on transaction rows                                                                                               | 3      |
+| 6.7 | Support deep-linking from Debts screen: navigate to transactions pre-filtered by `debt_id` via Expo Router params                                               | 2      |
+| 6.8 | Integration tests: transaction list renders with mock data, infinite scroll loads pages, filter params sent correctly, search debounces, debt badge displays    | 2      |
 
-**Sprint Total: 22 points**
+**Sprint Total: 24 points**
 
 ### Acceptance Criteria
 
 - [ ] Transaction list loads first page (20 items) from `GET /api/transactions` on mount
 - [ ] Scrolling to bottom triggers next page load — infinite scroll works until all pages loaded
 - [ ] Pagination indicator shows loading spinner at bottom while fetching next page
-- [ ] Each transaction row displays: date, description, amount (green for income, red for expense), category name + icon, account name
+- [ ] Each transaction row displays: date, description, amount (green for income, red for expense), category name + icon, account name, **"Debt Payment" badge if linked to a debt**
 - [ ] Filter bottom sheet opens from filter icon in header
 - [ ] Applying filters updates the list — API receives correct query parameters
+- [ ] **Debt filter** shows active debts; selecting one filters to that debt's payments only
+- [ ] **Deep-link from Debts screen** pre-filters transactions by `debt_id`
 - [ ] Active filter count badge shown on filter icon
 - [ ] Clearing all filters resets list to unfiltered state
 - [ ] Search input filters transactions by description/merchant with 300ms debounce
@@ -296,17 +315,17 @@
 
 **Phase 2d · Week of April 27, 2026**
 
-| #   | Task                                                                                                                  | Points |
-| --- | --------------------------------------------------------------------------------------------------------------------- | ------ |
-| 7.1 | Build transaction detail screen — read-only view with all fields, edit button, delete button                          | 3      |
-| 7.2 | Build transaction form (shared for create + edit) — all fields with `react-hook-form` + Zod from shared               | 5      |
-| 7.3 | Build hierarchical category picker — show parents, tap to expand children, only leaf categories selectable            | 3      |
-| 7.4 | Build add-transaction modal from center FAB — streamlined quick-entry form                                            | 3      |
-| 7.5 | Integrate receipt upload — `expo-image-picker` (camera + gallery) → upload to `POST /api/transactions/upload-receipt` | 3      |
-| 7.6 | Wire transaction creation: form submit → API call → invalidate queries → navigate back; handle errors                 | 2      |
-| 7.7 | Integration tests: transaction form validates via Zod, category picker hierarchy works, receipt upload flow completes | 2      |
+| #   | Task                                                                                                                                                                                                                                                                            | Points |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 7.1 | Build transaction detail screen — read-only view with all fields, edit button, delete button                                                                                                                                                                                    | 3      |
+| 7.2 | Build transaction form (shared for create + edit) — all fields with `react-hook-form` + Zod from shared; **debt repayment toggle** (visible when type=expense), **debt picker** (lists active debts), **auto-fill** (amount, category, description), **overpayment validation** | 8      |
+| 7.3 | Build hierarchical category picker — show parents, tap to expand children, only leaf categories selectable                                                                                                                                                                      | 3      |
+| 7.4 | Build add-transaction modal from center FAB — streamlined quick-entry form                                                                                                                                                                                                      | 3      |
+| 7.5 | Integrate receipt upload — `expo-image-picker` (camera + gallery) → upload to `POST /api/transactions/upload-receipt`                                                                                                                                                           | 3      |
+| 7.6 | Wire transaction creation: form submit → API call → invalidate queries → navigate back; handle errors                                                                                                                                                                           | 2      |
+| 7.7 | Integration tests: transaction form validates via Zod, category picker hierarchy works, receipt upload flow completes, **debt toggle auto-fills correctly, overpayment blocked**                                                                                                | 2      |
 
-**Sprint Total: 21 points**
+**Sprint Total: 24 points**
 
 ### Acceptance Criteria
 
@@ -325,7 +344,11 @@
 - [ ] Receipt image displays as thumbnail on transaction detail
 - [ ] Receipt upload succeeds and `receipt_url` is associated with the transaction
 - [ ] Error states: network failure shows retry option; validation failure shows specific field errors
-- [ ] Integration tests pass for transaction form and category picker
+- [ ] **Debt repayment toggle** visible when type=expense; hidden for income
+- [ ] **Debt picker** lists active debts with name + outstanding balance; selecting one auto-fills amount, category (Loans sub-category), description
+- [ ] **Overpayment validation**: entering amount > outstanding balance shows inline error
+- [ ] Creating a debt-linked transaction updates the debt's outstanding balance
+- [ ] Integration tests pass for transaction form, category picker, and **debt toggle**
 
 ---
 
@@ -367,26 +390,62 @@
 
 ---
 
-## Sprint 9 — More Tab, Settings & Notifications
+## Sprint 9 — Debt Tracking Screens
 
 **Phase 2f · Week of May 11, 2026**
 
-| #   | Task                                                                                                                                                                                           | Points |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 9.1 | Build More tab menu screen — sectioned list: Settings, Notifications, Reports (placeholder), Savings (placeholder), Debts (placeholder), Recurring (placeholder), Export (placeholder), Logout | 3      |
-| 9.2 | Build profile settings screen — edit name (`PUT /api/users/me`), display email (read-only)                                                                                                     | 2      |
-| 9.3 | Build theme toggle — dark/light/system modes via NativeWind theme provider                                                                                                                     | 2      |
-| 9.4 | Build accounts management screen (admin only) — list, create, edit, soft-delete accounts                                                                                                       | 3      |
-| 9.5 | Build user management screen (admin only) — list users, change roles (`PUT /api/users/:id/role`), invite user (`POST /api/auth/invite`)                                                        | 3      |
-| 9.6 | Build notification center screen — list notifications, mark individual as read, mark all as read, unread count badge on More tab                                                               | 3      |
-| 9.7 | Add role-based UI guards — hide admin-only actions (account CRUD, user management, budget create/edit, bill create/edit) for contributors                                                      | 2      |
-| 9.8 | Integration tests: settings save profile, theme persists, notification mark-read works, role guards hide admin actions                                                                         | 1      |
+| #   | Task                                                                                                                                                                                             | Points |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| 9.1 | Build debt list screen — summary cards (Total Outstanding, Total Monthly Payments), debt cards with name, type, amounts, rate, progress bar, projected payoff                                    | 5      |
+| 9.2 | Build add debt form — name, type (mortgage/car_loan/personal_loan/credit_card/student_loan/other), original amount, outstanding balance, interest rate, monthly payment, payment day, start date | 3      |
+| 9.3 | Build payment form per debt card — amount, account, date, payment method, description, category (auto-selected to Loans sub-category, overridable); overpayment validation                       | 5      |
+| 9.4 | Build payment history per debt — toggle showing last 5 payments; "View all payments" link navigates to transactions filtered by `debt_id`                                                        | 3      |
+| 9.5 | Implement payoff celebration — animated banner / haptic feedback when a debt payment brings balance to 0; `debt_payoff` notification fires                                                       | 2      |
+| 9.6 | Wire delete debt (soft-deactivate with confirmation); handle edit/delete of debt-linked transactions auto-adjusting debt balance                                                                 | 2      |
+| 9.7 | Integration tests: debt create, payment (overpayment blocked), payment history loads, payoff celebration triggers, delete restores balance                                                       | 2      |
+
+**Sprint Total: 22 points**
+
+### Acceptance Criteria
+
+- [ ] Debt list loads from `GET /api/debts` and shows all active debts
+- [ ] Summary cards show total outstanding (red) and total monthly payments
+- [ ] Each debt card shows: name, type label, outstanding/original amounts, interest rate, monthly payment, % paid progress bar, projected payoff date
+- [ ] Add Debt form validates and creates debt via `POST /api/debts`; debt appears in list
+- [ ] "Pay" button opens payment form with amount pre-filled to minimum payment
+- [ ] Payment amount cannot exceed outstanding balance (error shown)
+- [ ] Payment creates a linked transaction with correct `debt_id`, `category_id` (Loans sub-category), and description
+- [ ] After payment: outstanding balance decreases, progress bar updates, payoff date recalculates
+- [ ] When balance reaches 0: payoff celebration animation, debt marked inactive, `debt_payoff` notification sent
+- [ ] Payment history toggle shows last 5 payments with date, amount, description
+- [ ] "View all payments" link navigates to `/transactions?debt_id={id}` (pre-filtered)
+- [ ] Delete debt: confirmation → soft-deactivate → removed from list
+- [ ] Editing/deleting a debt-linked transaction auto-adjusts the debt balance
+- [ ] Integration tests pass for debt screens
+
+---
+
+## Sprint 10 — More Tab, Settings & Notifications
+
+**Phase 2g · Week of May 18, 2026**
+
+| #   | Task                                                                                                                                                                             | Points |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 9.1 | Build More tab menu screen — sectioned list: Settings, Notifications, Debts, Reports (placeholder), Savings (placeholder), Recurring (placeholder), Export (placeholder), Logout | 3      |
+| 9.2 | Build profile settings screen — edit name (`PUT /api/users/me`), display email (read-only)                                                                                       | 2      |
+| 9.3 | Build theme toggle — dark/light/system modes via NativeWind theme provider                                                                                                       | 2      |
+| 9.4 | Build accounts management screen (admin only) — list, create, edit, soft-delete accounts                                                                                         | 3      |
+| 9.5 | Build user management screen (admin only) — list users, change roles (`PUT /api/users/:id/role`), invite user (`POST /api/auth/invite`)                                          | 3      |
+| 9.6 | Build notification center screen — list notifications, mark individual as read, mark all as read, unread count badge on More tab                                                 | 3      |
+| 9.7 | Add role-based UI guards — hide admin-only actions (account CRUD, user management, budget create/edit, bill create/edit) for contributors                                        | 2      |
+| 9.8 | Integration tests: settings save profile, theme persists, notification mark-read works, role guards hide admin actions                                                           | 1      |
 
 **Sprint Total: 19 points**
 
 ### Acceptance Criteria
 
-- [ ] More tab shows organized menu with all sections; Phase 2 items show with "Coming soon" labels
+- [ ] More tab shows organized menu with all sections; Phase 2 items (Reports, Savings, Recurring, Export) show with "Coming soon" labels
+- [ ] Debts accessible from More tab (not a placeholder — full screen built in S9)
 - [ ] Profile screen displays user name (editable) and email (read-only); save updates name via API
 - [ ] Theme toggle switches between dark, light, and system modes; preference persists across restarts
 - [ ] Admin users see Accounts and User Management menu items; contributors do not
@@ -403,21 +462,21 @@
 
 ---
 
-## Sprint 10 — Push Notifications & Biometric Auth
+## Sprint 11 — Push Notifications & Biometric Auth
 
-**Phase 3a · Week of May 18, 2026**
+**Phase 3a · Week of May 25, 2026**
 
-| #    | Task                                                                                                                                                                                                                                           | Points |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 10.1 | Create Supabase migration `00005_push_tokens.sql` — `push_tokens` table with `user_id`, `token`, `platform`, `created_at`; RLS policies                                                                                                        | 2      |
-| 10.2 | Create API routes: `POST /api/users/me/push-token` (register), `DELETE /api/users/me/push-token` (deregister on logout)                                                                                                                        | 3      |
-| 10.3 | Integrate `expo-notifications` — request permissions, obtain push token, register with API on login                                                                                                                                            | 3      |
-| 10.4 | Build server-side push delivery: create `src/lib/push.ts` wrapping Expo Push API; modify `createNotification()` to dispatch push; handle ticket receipts and invalid token cleanup; create `/api/notifications/send-bill-reminders` cron route | 5      |
-| 10.5 | Handle push notifications in-app: foreground → toast, background/quit → tap opens deep link to relevant screen                                                                                                                                 | 2      |
-| 10.6 | Implement biometric auth via `expo-local-authentication` — opt-in prompt after first login, SecureStore preference, biometric gate on app launch                                                                                               | 3      |
-| 10.7 | Add auto-lock setting — lock app after configurable inactivity (1/5/15/30 min); fallback to password                                                                                                                                           | 1      |
-| 10.8 | Configure iOS Universal Links (`.well-known/apple-app-site-association`) and Android App Links (`.well-known/assetlinks.json`) on Vercel; update Expo `app.json` associated domains                                                            | 2      |
-| 10.9 | Unit tests: push token registration/deregistration, biometric preference storage, auto-lock timer logic (≥80% coverage)                                                                                                                        | 2      |
+| #    | Task                                                                                                                                                                                                                                                                                                                          | Points |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 11.1 | Create Supabase migration `00009_push_tokens.sql` — `push_tokens` table with `user_id`, `token`, `platform`, `created_at`; RLS policies                                                                                                                                                                                       | 2      |
+| 11.2 | Create API routes: `POST /api/users/me/push-token` (register), `DELETE /api/users/me/push-token` (deregister on logout)                                                                                                                                                                                                       | 3      |
+| 11.3 | Integrate `expo-notifications` — request permissions, obtain push token, register with API on login                                                                                                                                                                                                                           | 3      |
+| 11.4 | Build server-side push delivery: create `src/lib/push.ts` wrapping Expo Push API; modify `createNotification()` to dispatch push for all 8 notification types (incl. `debt_reminder`, `debt_payoff`); handle ticket receipts and invalid token cleanup; create `/api/notifications/send-reminders` cron route (bills + debts) | 5      |
+| 11.5 | Handle push notifications in-app: foreground → toast, background/quit → tap opens deep link to relevant screen (`debt_reminder`/`debt_payoff` → `/debts`)                                                                                                                                                                     | 2      |
+| 11.6 | Implement biometric auth via `expo-local-authentication` — opt-in prompt after first login, SecureStore preference, biometric gate on app launch                                                                                                                                                                              | 3      |
+| 11.7 | Add auto-lock setting — lock app after configurable inactivity (1/5/15/30 min); fallback to password                                                                                                                                                                                                                          | 1      |
+| 11.8 | Configure iOS Universal Links (`.well-known/apple-app-site-association`) and Android App Links (`.well-known/assetlinks.json`) on Vercel; update Expo `app.json` associated domains                                                                                                                                           | 2      |
+| 11.9 | Unit tests: push token registration/deregistration, biometric preference storage, auto-lock timer logic (≥80% coverage)                                                                                                                                                                                                       | 2      |
 
 **Sprint Total: 23 points**
 
@@ -429,8 +488,10 @@
 - [ ] Push token is deregistered via `DELETE /api/users/me/push-token` on logout
 - [ ] Budget threshold notification (>90% spent) triggers push to all household members with registered tokens
 - [ ] Bill reminder push sent X days before due date to relevant household members
+- [ ] **Debt reminder push** sent X days before `payment_day` to household members
+- [ ] **Debt payoff push** sent when a debt balance reaches 0
 - [ ] Push received while app is in foreground → in-app toast (not system notification)
-- [ ] Push received while app is in background → system notification → tapping opens correct screen
+- [ ] Push received while app is in background → system notification → tapping opens correct screen (**debt notifications → `/debts`**)
 - [ ] After first login, user is prompted: "Enable Face ID/fingerprint unlock?"
 - [ ] If enabled: next app launch shows biometric prompt before revealing content
 - [ ] Biometric failure → fallback button to enter email/password
@@ -442,9 +503,9 @@
 
 ---
 
-## Sprint 11 — Camera Receipts & Offline Read Cache
+## Sprint 12 — Camera Receipts & Offline Read Cache
 
-**Phase 3b · Week of May 25, 2026**
+**Phase 3b · Week of June 1, 2026**
 
 | #    | Task                                                                                                                                                                                 | Points |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
@@ -480,9 +541,9 @@
 
 ---
 
-## Sprint 12 — Offline Write Queue & Home Screen Widgets
+## Sprint 13 — Offline Write Queue & Home Screen Widgets
 
-**Phase 3c · Week of June 1, 2026**
+**Phase 3c · Week of June 8, 2026**
 
 | #    | Task                                                                                                                                                                                             | Points |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
@@ -516,9 +577,9 @@
 
 ---
 
-## Sprint 13 — Polish, Animations & Accessibility
+## Sprint 14 — Polish, Animations & Accessibility
 
-**Phase 4a · Week of June 8, 2026**
+**Phase 4a · Week of June 15, 2026**
 
 | #     | Task                                                                                                                         | Points |
 | ----- | ---------------------------------------------------------------------------------------------------------------------------- | ------ |
@@ -554,11 +615,11 @@
 
 ---
 
-## Sprint 14 — E2E Tests, Store Assets & Submission
+## Sprint 15 — E2E Tests, Store Assets & Submission
 
-**Phase 4b · Week of June 15, 2026**
+**Phase 4b · Week of June 22, 2026**
 
-> Unit and integration tests have been written alongside features in Sprints 1–13. This sprint focuses on end-to-end tests, final coverage audit, and store submission.
+> Unit and integration tests have been written alongside features in Sprints 1–14. This sprint focuses on end-to-end tests, final coverage audit, and store submission.
 
 | #    | Task                                                                                                                                                                                           | Points |
 | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
@@ -595,13 +656,13 @@
 
 ## Milestone Summary
 
-| Milestone             | Sprint | Date           | Gate                                                                                            |
-| --------------------- | ------ | -------------- | ----------------------------------------------------------------------------------------------- |
-| **M0: Test Baseline** | S0     | March 14, 2026 | Integration + E2E tests green, deploy config documented, Node version pinned                    |
-| **M1: Foundation**    | S3     | April 4, 2026  | Monorepo working, auth flow complete, hooks connected                                           |
-| **M2: Core MVP**      | S9     | May 16, 2026   | All core features functional (Dashboard, Transactions, Budgets, Bills, Settings, Notifications) |
-| **M3: Native Ready**  | S12    | June 6, 2026   | Push notifications, biometrics, camera, offline, widgets                                        |
-| **M4: Store Release** | S14    | June 19, 2026  | Apps submitted to App Store + Play Store                                                        |
+| Milestone             | Sprint | Date           | Gate                                                                                                       |
+| --------------------- | ------ | -------------- | ---------------------------------------------------------------------------------------------------------- |
+| **M0: Test Baseline** | S0     | March 14, 2026 | Integration + E2E tests green, deploy config documented, Node version pinned                               |
+| **M1: Foundation**    | S3     | April 4, 2026  | Monorepo working, auth flow complete, hooks connected (incl. debts)                                        |
+| **M2: Core MVP**      | S10    | May 23, 2026   | All core features functional (Dashboard, Transactions, Budgets, Bills, **Debts**, Settings, Notifications) |
+| **M3: Native Ready**  | S13    | June 13, 2026  | Push notifications, biometrics, camera, offline, widgets                                                   |
+| **M4: Store Release** | S15    | June 26, 2026  | Apps submitted to App Store + Play Store                                                                   |
 
 ---
 
@@ -624,14 +685,16 @@
 | S6     | Infinite scroll performance with large datasets        | Implement `windowSize` and `maxToRenderPerBatch` on FlatList        |
 | S7     | Category picker hierarchy UX complexity                | User test early; simplify if 2-level picker is confusing            |
 | S8     | Budget copy-forward edge cases                         | Match web behavior exactly; test month boundary scenarios           |
+| S9     | Debt payment auto-fill depends on Loans category       | Verify `seed_default_categories()` seeds Loans; test from mobile    |
+| S9     | Overpayment edge cases with concurrent users           | Server-side validation blocks overpayment; client shows error       |
 | S10    | Push notification permission denials                   | Graceful degradation — fall back to in-app polling                  |
 | S10    | Expo Push API delivery failures                        | Handle ticket receipts; clean up invalid tokens; retry logic        |
 | S11    | Offline cache memory pressure on low-end devices       | Limit cache to 4 MB; evict oldest entries first                     |
 | S12    | Offline sync conflicts with multi-user households      | Start simple (last-write-wins); iterate post-launch                 |
 | S12    | Offline receipt images bloat queue storage             | Store local URI only; upload on sync; enforce 50-item queue cap     |
 | S12    | Widget platform fragmentation                          | Ship without widgets if blocked; add in post-launch update          |
-| S14    | App Store review rejection                             | Review Apple/Google guidelines in S13; ensure all policies met      |
-| S14    | App binary too large for target market                 | Set 25 MB budget; audit bundle size in S13; lazy-load assets        |
+| S14    | App Store review rejection                             | Review Apple/Google guidelines in S14; ensure all policies met      |
+| S14    | App binary too large for target market                 | Set 25 MB budget; audit bundle size in S14; lazy-load assets        |
 
 ---
 

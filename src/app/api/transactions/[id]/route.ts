@@ -4,6 +4,8 @@ import { getAuthContext } from '@/lib/supabase/auth-helpers';
 import { updateTransactionSchema } from '@/lib/validations/transaction';
 import { calculatePayoffDate } from '@/lib/validations/savings-debt';
 import { createDebtPayoffNotification } from '@/lib/notifications';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -214,9 +216,8 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
  * - 'reduce': subtracts amount (new link)
  * - 'adjust': adds delta (edit — positive delta means payment decreased so balance goes up)
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function adjustDebtBalance(
-  supabase: any,
+  supabase: SupabaseClient<Database>,
   debtId: string,
   amount: number,
   _action: 'restore' | 'reduce' | 'adjust',

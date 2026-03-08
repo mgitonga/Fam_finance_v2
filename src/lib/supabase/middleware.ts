@@ -43,6 +43,7 @@ export async function updateSession(request: NextRequest) {
     '/forgot-password',
     '/auth/callback',
     '/reset-password',
+    '/accept-invite',
   ];
   const isPublicRoute = publicRoutes.some((route) => request.nextUrl.pathname.startsWith(route));
 
@@ -59,7 +60,8 @@ export async function updateSession(request: NextRequest) {
     user &&
     isPublicRoute &&
     request.nextUrl.pathname !== '/auth/callback' &&
-    request.nextUrl.pathname !== '/reset-password'
+    request.nextUrl.pathname !== '/reset-password' &&
+    request.nextUrl.pathname !== '/accept-invite'
   ) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';

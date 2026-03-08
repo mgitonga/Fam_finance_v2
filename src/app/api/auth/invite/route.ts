@@ -41,7 +41,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check for existing pending invite
+    const { data: existingInvite } = await supabase
+      .from('household_invites')
+      .select('id')
+      .eq('email', parsed.data.email)
+      .eq('household_id', auth.context.householdId)
+      .eq('status', 'pending')
+      .single();
+
+    if (existingInvite) {
+      return NextResponse.json(
+        { error: 'A pending invite already exists for this email' },
+        { status: 400 },
+      );
+    }
+
+    // Create invite record
+    const { data: invite, error: insertError } = await supabase
+      .from('household_invites')
+      .insert({
+        household_id: auth.context.householdId,
+        email: parsed.data.email,
+        name: parsed.data.name,
+        role: 'contributor',
+        invited_by: auth.context.userId,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      return NextResponse.json(
+        { error: `Failed to create invite: ${insertError.message}` },
+        { status: 500 },
+      );
+    }
+
     // Send invite email via Supabase Auth (requires service role key)
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     const { error: inviteError } = await adminSupabase.auth.admin.inviteUserByEmail(
       parsed.data.email,
       {
@@ -50,18 +87,23 @@ export async function POST(request: NextRequest) {
           role: 'contributor',
           household_id: auth.context.householdId,
         },
+        redirectTo: `${siteUrl}/auth/callback?next=/accept-invite`,
       },
     );
 
     if (inviteError) {
-      // Fallback: if admin API not available, use signUp with auto-confirm disabled
+      // Rollback the invite record
+      await supabase.from('household_invites').delete().eq('id', invite.id);
       return NextResponse.json(
         { error: `Failed to send invite: ${inviteError.message}` },
         { status: 500 },
       );
     }
 
-    return NextResponse.json({ message: `Invite sent to ${parsed.data.email}` }, { status: 201 });
+    return NextResponse.json(
+      { message: `Invite sent to ${parsed.data.email}`, data: invite },
+      { status: 201 },
+    );
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

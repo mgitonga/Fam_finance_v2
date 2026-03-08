@@ -321,6 +321,63 @@ export type Database = {
           },
         ];
       };
+      household_invites: {
+        Row: {
+          accepted_at: string | null;
+          cancelled_at: string | null;
+          email: string;
+          expires_at: string;
+          household_id: string;
+          id: string;
+          invited_at: string;
+          invited_by: string;
+          name: string;
+          role: string;
+          status: string;
+        };
+        Insert: {
+          accepted_at?: string | null;
+          cancelled_at?: string | null;
+          email: string;
+          expires_at?: string;
+          household_id: string;
+          id?: string;
+          invited_at?: string;
+          invited_by: string;
+          name: string;
+          role?: string;
+          status?: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          cancelled_at?: string | null;
+          email?: string;
+          expires_at?: string;
+          household_id?: string;
+          id?: string;
+          invited_at?: string;
+          invited_by?: string;
+          name?: string;
+          role?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'household_invites_household_id_fkey';
+            columns: ['household_id'];
+            isOneToOne: false;
+            referencedRelation: 'households';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'household_invites_invited_by_fkey';
+            columns: ['invited_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       households: {
         Row: {
           created_at: string;

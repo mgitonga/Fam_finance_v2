@@ -278,33 +278,46 @@ export type Database = {
       };
       goal_contributions: {
         Row: {
+          account_id: string;
           amount: number;
           created_at: string;
           date: string;
           goal_id: string;
           id: string;
           notes: string | null;
+          type: string;
           user_id: string;
         };
         Insert: {
+          account_id: string;
           amount: number;
           created_at?: string;
           date: string;
           goal_id: string;
           id?: string;
           notes?: string | null;
+          type?: string;
           user_id: string;
         };
         Update: {
+          account_id?: string;
           amount?: number;
           created_at?: string;
           date?: string;
           goal_id?: string;
           id?: string;
           notes?: string | null;
+          type?: string;
           user_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'goal_contributions_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'goal_contributions_goal_id_fkey';
             columns: ['goal_id'];

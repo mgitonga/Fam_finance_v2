@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { forgotPasswordSchema, type ForgotPasswordInput } from '@/lib/validations/auth';
 import { forgotPassword } from '@/lib/supabase/auth-actions';
+import { Logo } from '@/components/ui/logo';
 import { Loader2, ArrowLeft } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
@@ -37,9 +38,10 @@ export default function ForgotPasswordPage() {
       className="w-full max-w-md space-y-6 rounded-lg border bg-white p-8 shadow-sm dark:border-gray-800 dark:bg-gray-900"
       data-testid="forgot-password-page"
     >
-      <div className="text-center">
+      <div className="flex flex-col items-center gap-2">
+        <Logo size={48} showText={false} />
         <h1 className="text-primary text-2xl font-bold">FamFin</h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Reset your password</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Reset your password</p>
       </div>
 
       {serverError && (

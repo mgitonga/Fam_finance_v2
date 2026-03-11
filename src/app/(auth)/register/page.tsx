@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { registerSchema, type RegisterInput } from '@/lib/validations/auth';
 import { register as registerUser } from '@/lib/supabase/auth-actions';
+import { Logo } from '@/components/ui/logo';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -45,9 +46,10 @@ export default function RegisterPage() {
       className="w-full max-w-md space-y-6 rounded-lg border bg-white p-8 shadow-sm dark:border-gray-800 dark:bg-gray-900"
       data-testid="register-page"
     >
-      <div className="text-center">
+      <div className="flex flex-col items-center gap-2">
+        <Logo size={48} showText={false} />
         <h1 className="text-primary text-2xl font-bold">FamFin</h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Create your account</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Create your account</p>
       </div>
 
       {serverError && (

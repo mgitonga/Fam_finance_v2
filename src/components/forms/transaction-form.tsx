@@ -11,7 +11,7 @@ import { useAccounts } from '@/hooks/use-accounts';
 import { useCategories } from '@/hooks/use-categories';
 import { useDebts } from '@/hooks/use-debts';
 import { PAYMENT_METHODS } from '@/lib/constants';
-import { Loader2, X, Link2 } from 'lucide-react';
+import { Loader2, Link2 } from 'lucide-react';
 
 type CategoryWithChildren = {
   id: string;
@@ -122,21 +122,8 @@ export function TransactionForm({
   }
 
   return (
-    <form
-      onSubmit={handleSubmit(onFormSubmit)}
-      className="rounded-lg border bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
-      data-testid="transaction-form"
-    >
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">
-          {isEditing ? 'Edit Transaction' : 'New Transaction'}
-        </h3>
-        <button type="button" onClick={onCancel} className="text-gray-400 hover:text-gray-600">
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <form onSubmit={handleSubmit(onFormSubmit)} data-testid="transaction-form">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {/* Type */}
         <div>
           <label htmlFor="type" className="block text-sm font-medium">
@@ -368,7 +355,7 @@ export function TransactionForm({
         </div>
       </div>
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-6 flex gap-2 border-t pt-4 dark:border-gray-800">
         <button
           type="submit"
           disabled={isSubmitting}
@@ -378,7 +365,11 @@ export function TransactionForm({
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isEditing ? 'Update Transaction' : 'Save Transaction'}
         </button>
-        <button type="button" onClick={onCancel} className="rounded-md border px-4 py-2 text-sm">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-md border px-4 py-2 text-sm dark:border-gray-700"
+        >
           Cancel
         </button>
       </div>

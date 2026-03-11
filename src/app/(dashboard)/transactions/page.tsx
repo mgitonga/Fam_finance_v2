@@ -12,6 +12,7 @@ import { useAccounts } from '@/hooks/use-accounts';
 import { useCategories } from '@/hooks/use-categories';
 import { useDebts } from '@/hooks/use-debts';
 import { TransactionForm } from '@/components/forms/transaction-form';
+import { Modal } from '@/components/ui/modal';
 import { formatKES, formatDate } from '@/lib/utils';
 import { PAYMENT_METHODS } from '@/lib/constants';
 import type { CreateTransactionInput } from '@/lib/validations/transaction';
@@ -142,43 +143,43 @@ export default function TransactionsPage() {
             {pagination.total} transaction{pagination.total !== 1 ? 's' : ''}
           </p>
         </div>
-        {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-md px-4 py-2 text-sm font-medium text-white"
-            data-testid="add-transaction-btn"
-          >
-            <Plus className="h-4 w-4" /> Add Transaction
-          </button>
-        )}
+        <button
+          onClick={() => setShowForm(true)}
+          className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-md px-4 py-2 text-sm font-medium text-white"
+          data-testid="add-transaction-btn"
+        >
+          <Plus className="h-4 w-4" /> Add Transaction
+        </button>
       </div>
 
-      {showForm && (
-        <div className="mt-4">
-          <TransactionForm
-            defaultValues={
-              editingTx
-                ? {
-                    type: editingTx.type as 'income' | 'expense',
-                    amount: editingTx.amount,
-                    date: editingTx.date,
-                    account_id: editingTx.account_id,
-                    category_id: editingTx.category_id,
-                    description: editingTx.description,
-                    merchant: editingTx.merchant,
-                    payment_method:
-                      editingTx.payment_method as CreateTransactionInput['payment_method'],
-                    notes: editingTx.notes,
-                    debt_id: editingTx.debt_id,
-                  }
-                : undefined
-            }
-            onSubmit={editingTx ? handleUpdate : handleCreate}
-            onCancel={cancelForm}
-            isEditing={!!editingTx}
-          />
-        </div>
-      )}
+      <Modal
+        open={showForm}
+        onClose={cancelForm}
+        title={editingTx ? 'Edit Transaction' : 'New Transaction'}
+      >
+        <TransactionForm
+          defaultValues={
+            editingTx
+              ? {
+                  type: editingTx.type as 'income' | 'expense',
+                  amount: editingTx.amount,
+                  date: editingTx.date,
+                  account_id: editingTx.account_id,
+                  category_id: editingTx.category_id,
+                  description: editingTx.description,
+                  merchant: editingTx.merchant,
+                  payment_method:
+                    editingTx.payment_method as CreateTransactionInput['payment_method'],
+                  notes: editingTx.notes,
+                  debt_id: editingTx.debt_id,
+                }
+              : undefined
+          }
+          onSubmit={editingTx ? handleUpdate : handleCreate}
+          onCancel={cancelForm}
+          isEditing={!!editingTx}
+        />
+      </Modal>
 
       {/* Search & Filters */}
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">

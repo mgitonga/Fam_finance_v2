@@ -24,7 +24,6 @@ import {
   Loader2,
   Plus,
   Trash2,
-  X,
   CreditCard,
   Calendar,
   TrendingDown,
@@ -32,6 +31,7 @@ import {
   ExternalLink,
   PartyPopper,
 } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
 
 type Debt = {
   id: string;
@@ -172,14 +172,12 @@ export default function DebtsPage() {
           <h1 className="text-2xl font-bold">Debt Tracking</h1>
           <p className="mt-1 text-sm text-gray-500">Track debts and project payoff dates.</p>
         </div>
-        {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white"
-          >
-            <Plus className="h-4 w-4" /> Add Debt
-          </button>
-        )}
+        <button
+          onClick={() => setShowForm(true)}
+          className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white"
+        >
+          <Plus className="h-4 w-4" /> Add Debt
+        </button>
       </div>
 
       {/* Summary */}
@@ -194,25 +192,16 @@ export default function DebtsPage() {
         </div>
       </div>
 
-      {showForm && (
-        <form
-          onSubmit={handleSubmit(onCreateDebt)}
-          className="mt-4 rounded-lg border bg-white p-4 dark:border-gray-800 dark:bg-gray-900"
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium">New Debt</h3>
-            <button
-              type="button"
-              onClick={() => {
-                setShowForm(false);
-                reset();
-              }}
-              className="text-gray-400"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <Modal
+        open={showForm}
+        onClose={() => {
+          setShowForm(false);
+          reset();
+        }}
+        title="New Debt"
+      >
+        <form onSubmit={handleSubmit(onCreateDebt)}>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <label className="block text-sm font-medium">Name</label>
               <input
@@ -311,7 +300,7 @@ export default function DebtsPage() {
               )}
             </div>
           </div>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-4 flex gap-2 border-t pt-4 dark:border-gray-800">
             <button
               type="submit"
               disabled={isSubmitting}
@@ -325,13 +314,13 @@ export default function DebtsPage() {
                 setShowForm(false);
                 reset();
               }}
-              className="rounded-md border px-4 py-2 text-sm"
+              className="rounded-md border px-4 py-2 text-sm dark:border-gray-700"
             >
               Cancel
             </button>
           </div>
         </form>
-      )}
+      </Modal>
 
       <div className="mt-6 space-y-4">
         {(!debts || debts.length === 0) && (

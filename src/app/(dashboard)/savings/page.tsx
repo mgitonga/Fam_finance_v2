@@ -19,7 +19,8 @@ import {
 } from '@/hooks/use-savings';
 import { formatKES, formatDate } from '@/lib/utils';
 import { getBudgetStatus } from '@/lib/validations/budget';
-import { Loader2, Plus, Trash2, X, Target, TrendingUp } from 'lucide-react';
+import { Loader2, Plus, Trash2, Target, TrendingUp } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
 
 type Goal = {
   id: string;
@@ -96,35 +97,24 @@ export default function SavingsPage() {
           <h1 className="text-2xl font-bold">Savings Goals</h1>
           <p className="mt-1 text-sm text-gray-500">Track progress towards your financial goals.</p>
         </div>
-        {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white"
-          >
-            <Plus className="h-4 w-4" /> New Goal
-          </button>
-        )}
+        <button
+          onClick={() => setShowForm(true)}
+          className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white"
+        >
+          <Plus className="h-4 w-4" /> New Goal
+        </button>
       </div>
 
-      {showForm && (
-        <form
-          onSubmit={handleSubmit(onCreateGoal)}
-          className="mt-4 rounded-lg border bg-white p-4 dark:border-gray-800 dark:bg-gray-900"
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium">New Savings Goal</h3>
-            <button
-              type="button"
-              onClick={() => {
-                setShowForm(false);
-                reset();
-              }}
-              className="text-gray-400"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+      <Modal
+        open={showForm}
+        onClose={() => {
+          setShowForm(false);
+          reset();
+        }}
+        title="New Savings Goal"
+      >
+        <form onSubmit={handleSubmit(onCreateGoal)}>
+          <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <label className="block text-sm font-medium">Name</label>
               <input
@@ -160,7 +150,7 @@ export default function SavingsPage() {
               )}
             </div>
           </div>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-4 flex gap-2 border-t pt-4 dark:border-gray-800">
             <button
               type="submit"
               disabled={isSubmitting}
@@ -174,13 +164,13 @@ export default function SavingsPage() {
                 setShowForm(false);
                 reset();
               }}
-              className="rounded-md border px-4 py-2 text-sm"
+              className="rounded-md border px-4 py-2 text-sm dark:border-gray-700"
             >
               Cancel
             </button>
           </div>
         </form>
-      )}
+      </Modal>
 
       <div className="mt-6 space-y-4">
         {(!goals || goals.length === 0) && (

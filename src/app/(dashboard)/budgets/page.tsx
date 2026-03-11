@@ -26,6 +26,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
 
 type SubCategorySpending = {
   id: string;
@@ -265,36 +266,37 @@ export default function BudgetsPage() {
       </div>
 
       {/* Overall budget form */}
-      {showOverallForm && (
-        <div className="mt-4 rounded-lg border bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-          <h3 className="font-medium">Set Overall Monthly Budget</h3>
-          <div className="mt-2 flex gap-2">
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="Amount (KES)"
-              value={overallAmount}
-              onChange={(e) => setOverallAmount(e.target.value)}
-              className="w-48 rounded-md border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"
-              data-testid="overall-budget-amount"
-            />
-            <button
-              onClick={handleSetOverall}
-              disabled={!overallAmount}
-              className="bg-primary hover:bg-primary/90 rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => setShowOverallForm(false)}
-              className="rounded-md border px-4 py-2 text-sm"
-            >
-              Cancel
-            </button>
-          </div>
+      <Modal
+        open={showOverallForm}
+        onClose={() => setShowOverallForm(false)}
+        title="Set Overall Monthly Budget"
+      >
+        <div className="flex gap-2">
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="Amount (KES)"
+            value={overallAmount}
+            onChange={(e) => setOverallAmount(e.target.value)}
+            className="w-48 rounded-md border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"
+            data-testid="overall-budget-amount"
+          />
+          <button
+            onClick={handleSetOverall}
+            disabled={!overallAmount}
+            className="bg-primary hover:bg-primary/90 rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          >
+            Save
+          </button>
+          <button
+            onClick={() => setShowOverallForm(false)}
+            className="rounded-md border px-4 py-2 text-sm dark:border-gray-700"
+          >
+            Cancel
+          </button>
         </div>
-      )}
+      </Modal>
 
       {/* Actions */}
       <div className="mt-6 flex flex-wrap gap-2">
@@ -321,16 +323,12 @@ export default function BudgetsPage() {
       </div>
 
       {/* Add budget form */}
-      {showAddForm && (
-        <div
-          className="mt-4 rounded-lg border bg-white p-4 dark:border-gray-800 dark:bg-gray-900"
-          data-testid="budget-form"
-        >
-          <h3 className="font-medium">Set Category Budget</h3>
-          <p className="mt-1 mb-2 text-xs text-gray-500">
+      <Modal open={showAddForm} onClose={() => setShowAddForm(false)} title="Set Category Budget">
+        <div data-testid="budget-form">
+          <p className="mb-3 text-xs text-gray-500">
             Budgets are set on parent categories. Sub-category spending automatically rolls up.
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
@@ -371,13 +369,13 @@ export default function BudgetsPage() {
             </button>
             <button
               onClick={() => setShowAddForm(false)}
-              className="rounded-md border px-4 py-2 text-sm"
+              className="rounded-md border px-4 py-2 text-sm dark:border-gray-700"
             >
               Cancel
             </button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Budget progress list */}
       <div className="mt-6 space-y-4">

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   ArrowLeftRight,
+  Landmark,
   PiggyBank,
   Repeat,
   Target,
@@ -21,6 +22,7 @@ import { Logo } from '@/components/ui/logo';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
+  { href: '/accounts', label: 'Accounts', icon: Landmark },
   { href: '/budgets', label: 'Budgets', icon: PiggyBank },
   { href: '/recurring', label: 'Recurring', icon: Repeat },
   { href: '/savings', label: 'Savings', icon: Target },

@@ -17,6 +17,47 @@ export function useAccounts() {
   });
 }
 
+export function useAccount(id: string) {
+  return useQuery({
+    queryKey: [...ACCOUNTS_KEY, id],
+    queryFn: async () => {
+      const response = await fetch(`/api/accounts/${id}`);
+      if (!response.ok) throw new Error('Failed to fetch account');
+      const json = await response.json();
+      return json.data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useAccountSparkline(id: string) {
+  return useQuery({
+    queryKey: [...ACCOUNTS_KEY, id, 'sparkline'],
+    queryFn: async () => {
+      const response = await fetch(`/api/accounts/${id}/sparkline`);
+      if (!response.ok) throw new Error('Failed to fetch sparkline');
+      const json = await response.json();
+      return json.data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useAccountStatement(id: string, startDate: string, endDate: string) {
+  return useQuery({
+    queryKey: [...ACCOUNTS_KEY, id, 'statement', startDate, endDate],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/reports/account-statement?account_id=${id}&start_date=${startDate}&end_date=${endDate}`,
+      );
+      if (!response.ok) throw new Error('Failed to fetch statement');
+      const json = await response.json();
+      return json.data;
+    },
+    enabled: !!id && !!startDate && !!endDate,
+  });
+}
+
 export function useCreateAccount() {
   const queryClient = useQueryClient();
   return useMutation({

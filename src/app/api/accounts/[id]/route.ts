@@ -49,6 +49,34 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const supabase = await createClient();
+
+    // Get existing account
+    const { data: existing } = await supabase
+      .from('accounts')
+      .select('*')
+      .eq('id', id)
+      .eq('household_id', auth.context.householdId)
+      .single();
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+    }
+
+    // If balance is changing, create an adjustment transaction for audit trail
+    if (parsed.data.balance !== undefined && parsed.data.balance !== existing.balance) {
+      const delta = parsed.data.balance - existing.balance;
+
+      await supabase.from('transactions').insert({
+        household_id: auth.context.householdId,
+        user_id: auth.context.userId,
+        type: 'adjustment',
+        amount: Math.abs(delta),
+        date: new Date().toISOString().split('T')[0],
+        account_id: id,
+        description: 'Balance adjustment',
+      });
+    }
+
     const { data, error } = await supabase
       .from('accounts')
       .update(parsed.data)

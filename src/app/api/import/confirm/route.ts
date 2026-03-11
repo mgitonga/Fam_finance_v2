@@ -87,6 +87,21 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      // Overdraft protection for expense rows
+      if (row.type === 'expense') {
+        const currentAccountBalance = accountMatch?.balance ?? 0;
+        const pendingChange = balanceChanges.get(accountId) || 0;
+        const projectedBalance = Number(currentAccountBalance) + pendingChange - row.amount;
+        if (projectedBalance < 0) {
+          errorCount++;
+          errors.push({
+            row: i + 1,
+            error: `Insufficient balance. Account would go below zero.`,
+          });
+          continue;
+        }
+      }
+
       const { error: insertError } = await supabase.from('transactions').insert({
         household_id: auth.context.householdId,
         user_id: auth.context.userId,

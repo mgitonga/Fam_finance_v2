@@ -18,7 +18,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from('transactions')
-      .select('*, categories(name, color), accounts(name)')
+      .select('*, categories(name, color), accounts!transactions_account_id_fkey(name)')
       .eq('id', id)
       .eq('household_id', auth.context.householdId)
       .single();
@@ -69,38 +69,159 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Reverse old balance impact
-    const oldBalanceChange = existing.type === 'income' ? -existing.amount : existing.amount;
-
-    // Calculate new balance impact
     const newType = parsed.data.type || existing.type;
     const newAmount = parsed.data.amount || existing.amount;
-    const newBalanceChange = newType === 'income' ? newAmount : -newAmount;
+    const newAccountId = parsed.data.account_id || existing.account_id;
+    const newToAccountId =
+      parsed.data.to_account_id !== undefined ? parsed.data.to_account_id : existing.to_account_id;
+
+    // Get the current account balance for overdraft check
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('balance')
+      .eq('id', newAccountId)
+      .single();
+
+    if (!account) {
+      return NextResponse.json({ error: 'Account not found' }, { status: 400 });
+    }
+
+    // Compute projected balance after reversing old and applying new
+    let projectedBalance = Number(account.balance);
+
+    // Reverse old impact on this account (if same account)
+    if (existing.account_id === newAccountId) {
+      if (existing.type === 'income') {
+        projectedBalance -= existing.amount;
+      } else if (existing.type === 'expense' || existing.type === 'transfer') {
+        projectedBalance += existing.amount;
+      }
+    }
+
+    // Apply new impact
+    if (newType === 'expense' || newType === 'transfer') {
+      projectedBalance -= newAmount;
+    } else if (newType === 'income') {
+      projectedBalance += newAmount;
+    }
+
+    // Overdraft protection
+    if (projectedBalance < 0) {
+      return NextResponse.json(
+        {
+          error: `Insufficient balance. Account has KES ${Number(account.balance).toLocaleString()} but transaction requires KES ${newAmount.toLocaleString()}.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    // For transfers, verify destination account
+    if (newType === 'transfer' && newToAccountId) {
+      const { data: destAccount } = await supabase
+        .from('accounts')
+        .select('id, balance')
+        .eq('id', newToAccountId)
+        .single();
+
+      if (!destAccount) {
+        return NextResponse.json({ error: 'Destination account not found' }, { status: 400 });
+      }
+    }
 
     // Update transaction
     const { data, error } = await supabase
       .from('transactions')
       .update(parsed.data)
       .eq('id', id)
-      .select('*, categories(name, color), accounts(name)')
+      .select('*, categories(name, color), accounts!transactions_account_id_fkey(name)')
       .single();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Update account balance (reverse old + apply new)
-    const accountId = parsed.data.account_id || existing.account_id;
-    const { data: account } = await supabase
-      .from('accounts')
-      .select('balance')
-      .eq('id', accountId)
-      .single();
-
-    if (account) {
-      await supabase
+    // Reverse old balance impacts
+    if (existing.type === 'transfer') {
+      // Reverse source debit
+      const { data: oldSrcAccount } = await supabase
         .from('accounts')
-        .update({ balance: account.balance + oldBalanceChange + newBalanceChange })
-        .eq('id', accountId);
+        .select('balance')
+        .eq('id', existing.account_id)
+        .single();
+      if (oldSrcAccount) {
+        await supabase
+          .from('accounts')
+          .update({ balance: Number(oldSrcAccount.balance) + existing.amount })
+          .eq('id', existing.account_id);
+      }
+      // Reverse destination credit
+      if (existing.to_account_id) {
+        const { data: oldDestAccount } = await supabase
+          .from('accounts')
+          .select('balance')
+          .eq('id', existing.to_account_id)
+          .single();
+        if (oldDestAccount) {
+          await supabase
+            .from('accounts')
+            .update({ balance: Number(oldDestAccount.balance) - existing.amount })
+            .eq('id', existing.to_account_id);
+        }
+      }
+    } else if (existing.type !== 'adjustment') {
+      const oldBalanceChange = existing.type === 'income' ? -existing.amount : existing.amount;
+      const { data: oldAccount } = await supabase
+        .from('accounts')
+        .select('balance')
+        .eq('id', existing.account_id)
+        .single();
+      if (oldAccount) {
+        await supabase
+          .from('accounts')
+          .update({ balance: Number(oldAccount.balance) + oldBalanceChange })
+          .eq('id', existing.account_id);
+      }
+    }
+
+    // Apply new balance impacts
+    if (newType === 'transfer') {
+      const { data: srcAccount } = await supabase
+        .from('accounts')
+        .select('balance')
+        .eq('id', newAccountId)
+        .single();
+      if (srcAccount) {
+        await supabase
+          .from('accounts')
+          .update({ balance: Number(srcAccount.balance) - newAmount })
+          .eq('id', newAccountId);
+      }
+      if (newToAccountId) {
+        const { data: destAccount } = await supabase
+          .from('accounts')
+          .select('balance')
+          .eq('id', newToAccountId)
+          .single();
+        if (destAccount) {
+          await supabase
+            .from('accounts')
+            .update({ balance: Number(destAccount.balance) + newAmount })
+            .eq('id', newToAccountId);
+        }
+      }
+    } else if (newType !== 'adjustment') {
+      const newBalanceChange = newType === 'income' ? newAmount : -newAmount;
+      const { data: newAccount } = await supabase
+        .from('accounts')
+        .select('balance')
+        .eq('id', newAccountId)
+        .single();
+      if (newAccount) {
+        await supabase
+          .from('accounts')
+          .update({ balance: Number(newAccount.balance) + newBalanceChange })
+          .eq('id', newAccountId);
+      }
     }
 
     // Handle debt balance adjustments
@@ -157,7 +278,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     // Get existing transaction
     const { data: existing } = await supabase
       .from('transactions')
-      .select('*, accounts(balance)')
+      .select('*, accounts!transactions_account_id_fkey(balance)')
       .eq('id', id)
       .eq('household_id', auth.context.householdId)
       .single();
@@ -171,6 +292,21 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
+    // Overdraft protection: deleting income reduces balance
+    if (existing.type === 'income') {
+      const currentBalance = Number(
+        existing.accounts ? (existing.accounts as { balance: number }).balance : 0,
+      );
+      if (currentBalance - existing.amount < 0) {
+        return NextResponse.json(
+          {
+            error: `Insufficient balance. Account has KES ${currentBalance.toLocaleString()} but reversing this income requires KES ${existing.amount.toLocaleString()}.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     // Delete transaction
     const { error } = await supabase.from('transactions').delete().eq('id', id);
 
@@ -179,18 +315,46 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     }
 
     // Reverse balance impact
-    const balanceRevert = existing.type === 'income' ? -existing.amount : existing.amount;
-    const { data: account } = await supabase
-      .from('accounts')
-      .select('balance')
-      .eq('id', existing.account_id)
-      .single();
-
-    if (account) {
-      await supabase
+    if (existing.type === 'transfer') {
+      // Restore source balance (add back), reduce destination balance (subtract)
+      const { data: srcAccount } = await supabase
         .from('accounts')
-        .update({ balance: account.balance + balanceRevert })
-        .eq('id', existing.account_id);
+        .select('balance')
+        .eq('id', existing.account_id)
+        .single();
+      if (srcAccount) {
+        await supabase
+          .from('accounts')
+          .update({ balance: Number(srcAccount.balance) + existing.amount })
+          .eq('id', existing.account_id);
+      }
+      if (existing.to_account_id) {
+        const { data: destAccount } = await supabase
+          .from('accounts')
+          .select('balance')
+          .eq('id', existing.to_account_id)
+          .single();
+        if (destAccount) {
+          await supabase
+            .from('accounts')
+            .update({ balance: Number(destAccount.balance) - existing.amount })
+            .eq('id', existing.to_account_id);
+        }
+      }
+    } else if (existing.type !== 'adjustment') {
+      const balanceRevert = existing.type === 'income' ? -existing.amount : existing.amount;
+      const { data: account } = await supabase
+        .from('accounts')
+        .select('balance')
+        .eq('id', existing.account_id)
+        .single();
+
+      if (account) {
+        await supabase
+          .from('accounts')
+          .update({ balance: Number(account.balance) + balanceRevert })
+          .eq('id', existing.account_id);
+      }
     }
 
     // If the deleted transaction was linked to a debt, restore the amount

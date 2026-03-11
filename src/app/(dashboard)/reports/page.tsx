@@ -8,6 +8,7 @@ import { IncomeVsExpenseTrend } from '@/components/charts/income-expense-trend';
 import { NetWorthChart } from '@/components/charts/net-worth-chart';
 import { SpendingTrendsChart } from '@/components/charts/spending-trends';
 import { BudgetVsActualReport } from '@/components/charts/budget-vs-actual-report';
+import { useAccounts, useAccountStatement } from '@/hooks/use-accounts';
 import {
   ChevronLeft,
   ChevronRight,
@@ -39,6 +40,7 @@ const TABS = [
   { id: 'networth', label: 'Net Worth' },
   { id: 'budgetactual', label: 'Budget vs Actual' },
   { id: 'spending', label: 'Spending Trends' },
+  { id: 'statements', label: 'Account Statements' },
 ];
 
 export default function ReportsPage() {
@@ -47,6 +49,18 @@ export default function ReportsPage() {
   const [year, setYear] = useState(now.getFullYear());
   const [activeTab, setActiveTab] = useState('summary');
   const [trendMonths, setTrendMonths] = useState(6);
+  const [statementAccountId, setStatementAccountId] = useState('');
+  const [statementStartDate, setStatementStartDate] = useState(
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`,
+  );
+  const [statementEndDate, setStatementEndDate] = useState(now.toISOString().split('T')[0]);
+
+  const { data: reportAccounts } = useAccounts();
+  const { data: statementData, isLoading: stmtLoading } = useAccountStatement(
+    statementAccountId,
+    statementStartDate,
+    statementEndDate,
+  );
 
   const prevMonth = () => {
     if (month === 1) {
@@ -310,6 +324,131 @@ export default function ReportsPage() {
                 data={spendingData?.chartData || []}
                 categories={spendingData?.categories || []}
               />
+            )}
+          </div>
+        )}
+
+        {activeTab === 'statements' && (
+          <div>
+            <h3 className="mb-4 text-lg font-semibold">Account Statement</h3>
+            <div className="mb-4 flex flex-wrap items-end gap-3">
+              <div>
+                <label className="block text-xs text-gray-500">Account</label>
+                <select
+                  value={statementAccountId}
+                  onChange={(e) => setStatementAccountId(e.target.value)}
+                  className="rounded-md border px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+                >
+                  <option value="">Select account...</option>
+                  {reportAccounts?.map((a: { id: string; name: string }) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500">From</label>
+                <input
+                  type="date"
+                  value={statementStartDate}
+                  onChange={(e) => setStatementStartDate(e.target.value)}
+                  className="rounded-md border px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500">To</label>
+                <input
+                  type="date"
+                  value={statementEndDate}
+                  onChange={(e) => setStatementEndDate(e.target.value)}
+                  className="rounded-md border px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+                />
+              </div>
+            </div>
+            {!statementAccountId ? (
+              <p className="py-8 text-center text-gray-500">
+                Select an account to view its statement.
+              </p>
+            ) : stmtLoading ? (
+              <Loading />
+            ) : statementData ? (
+              <div>
+                <div className="mb-2 flex justify-between text-sm font-medium">
+                  <span>Opening Balance</span>
+                  <span>{formatKES(statementData.opening_balance)}</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left text-xs text-gray-500 dark:border-gray-800">
+                        <th className="px-3 py-2">Date</th>
+                        <th className="px-3 py-2">Description</th>
+                        <th className="px-3 py-2">Category</th>
+                        <th className="px-3 py-2 text-right">Debit</th>
+                        <th className="px-3 py-2 text-right">Credit</th>
+                        <th className="px-3 py-2 text-right">Balance</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {statementData.transactions?.map(
+                        (t: {
+                          id: string;
+                          date: string;
+                          description: string | null;
+                          category: string | null;
+                          debit: number;
+                          credit: number;
+                          running_balance: number;
+                        }) => (
+                          <tr key={t.id} className="border-b dark:border-gray-800">
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              {new Date(t.date).toLocaleDateString('en-GB')}
+                            </td>
+                            <td className="px-3 py-2">{t.description || '—'}</td>
+                            <td className="px-3 py-2 text-gray-500">{t.category || '—'}</td>
+                            <td className="px-3 py-2 text-right text-red-600">
+                              {t.debit > 0 ? formatKES(t.debit) : ''}
+                            </td>
+                            <td className="px-3 py-2 text-right text-green-600">
+                              {t.credit > 0 ? formatKES(t.credit) : ''}
+                            </td>
+                            <td className="px-3 py-2 text-right font-medium">
+                              {formatKES(t.running_balance)}
+                            </td>
+                          </tr>
+                        ),
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-2 flex justify-between border-t pt-2 text-sm font-medium dark:border-gray-800">
+                  <span>Closing Balance</span>
+                  <span className="font-bold">{formatKES(statementData.closing_balance)}</span>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-xs text-gray-500">Total Credits</p>
+                    <p className="font-semibold text-green-600">
+                      {formatKES(statementData.summary?.total_credits ?? 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Total Debits</p>
+                    <p className="font-semibold text-red-600">
+                      {formatKES(statementData.summary?.total_debits ?? 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Net Change</p>
+                    <p className="font-semibold">
+                      {formatKES(statementData.summary?.net_change ?? 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="py-8 text-center text-gray-500">No data available.</p>
             )}
           </div>
         )}

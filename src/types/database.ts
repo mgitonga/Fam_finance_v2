@@ -603,7 +603,7 @@ export type Database = {
         Row: {
           account_id: string;
           amount: number;
-          category_id: string;
+          category_id: string | null;
           created_at: string;
           date: string;
           debt_id: string | null;
@@ -619,6 +619,7 @@ export type Database = {
           split_ratio: number | null;
           split_with: string | null;
           tags: string[] | null;
+          to_account_id: string | null;
           type: string;
           updated_at: string;
           user_id: string;
@@ -626,7 +627,7 @@ export type Database = {
         Insert: {
           account_id: string;
           amount: number;
-          category_id: string;
+          category_id?: string | null;
           created_at?: string;
           date: string;
           debt_id?: string | null;
@@ -642,6 +643,7 @@ export type Database = {
           split_ratio?: number | null;
           split_with?: string | null;
           tags?: string[] | null;
+          to_account_id?: string | null;
           type: string;
           updated_at?: string;
           user_id: string;
@@ -649,7 +651,7 @@ export type Database = {
         Update: {
           account_id?: string;
           amount?: number;
-          category_id?: string;
+          category_id?: string | null;
           created_at?: string;
           date?: string;
           debt_id?: string | null;
@@ -665,6 +667,7 @@ export type Database = {
           split_ratio?: number | null;
           split_with?: string | null;
           tags?: string[] | null;
+          to_account_id?: string | null;
           type?: string;
           updated_at?: string;
           user_id?: string;
@@ -689,6 +692,13 @@ export type Database = {
             columns: ['category_id'];
             isOneToOne: false;
             referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'transactions_to_account_id_fkey';
+            columns: ['to_account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
             referencedColumns: ['id'];
           },
           {

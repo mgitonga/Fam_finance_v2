@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
 
       const byParent: Record<string, number> = {};
       for (const t of txns || []) {
+        if (!t.category_id) continue;
         const parentId = childToParent.get(t.category_id) || t.category_id;
         byParent[parentId] = (byParent[parentId] || 0) + Number(t.amount);
       }

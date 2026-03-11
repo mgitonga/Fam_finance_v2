@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         is_recurring: true,
         recurring_id: rule.id,
       })
-      .select('*, categories(name, color), accounts(name)')
+      .select('*, categories(name, color), accounts!transactions_account_id_fkey(name)')
       .single();
 
     if (txnError) {
@@ -60,6 +60,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .single();
 
     if (account) {
+      // Overdraft protection for expense-type recurring transactions
+      if (rule.type === 'expense' && Number(account.balance) < Number(amount)) {
+        // Roll back: delete the just-created transaction
+        if (transaction) {
+          await supabase.from('transactions').delete().eq('id', transaction.id);
+        }
+        return NextResponse.json(
+          {
+            error: `Insufficient balance. Account has KES ${Number(account.balance).toLocaleString()} but transaction requires KES ${Number(amount).toLocaleString()}.`,
+          },
+          { status: 400 },
+        );
+      }
+
       const balanceChange = rule.type === 'income' ? Number(amount) : -Number(amount);
       await supabase
         .from('accounts')

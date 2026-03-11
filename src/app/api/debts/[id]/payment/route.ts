@@ -55,6 +55,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     if (!account) return NextResponse.json({ error: 'Account not found' }, { status: 400 });
 
+    // Overdraft protection
+    if (Number(account.balance) < parsed.data.amount) {
+      return NextResponse.json(
+        {
+          error: `Insufficient balance. Account has KES ${Number(account.balance).toLocaleString()} but transaction requires KES ${parsed.data.amount.toLocaleString()}.`,
+        },
+        { status: 400 },
+      );
+    }
+
     // Resolve category — look up a Loans sub-category for the household
     let categoryId = parsed.data.category_id;
     if (!categoryId) {

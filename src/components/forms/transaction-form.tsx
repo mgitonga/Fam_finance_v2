@@ -112,6 +112,16 @@ export function TransactionForm({
     }
   }, [isDebtRepayment, setValue]);
 
+  // When switching to transfer, clear category; when switching away, clear to_account_id
+  useEffect(() => {
+    if (txnType === 'transfer') {
+      setValue('category_id', null);
+    } else {
+      setValue('to_account_id', null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txnType]);
+
   // Filter categories based on transaction type
   const filteredCategories = categories?.filter(
     (cat: CategoryWithChildren) => cat.type === txnType || cat.type === 'both',
@@ -138,6 +148,7 @@ export function TransactionForm({
           >
             <option value="expense">Expense</option>
             <option value="income">Income</option>
+            <option value="transfer">Transfer</option>
           </select>
         </div>
 
@@ -230,7 +241,7 @@ export function TransactionForm({
         {/* Account */}
         <div>
           <label htmlFor="account_id" className="block text-sm font-medium">
-            Account
+            {txnType === 'transfer' ? 'From Account' : 'Account'}
           </label>
           <select
             id="account_id"
@@ -250,44 +261,73 @@ export function TransactionForm({
           )}
         </div>
 
-        {/* Category */}
-        <div>
-          <label htmlFor="category_id" className="block text-sm font-medium">
-            Category
-          </label>
-          <select
-            id="category_id"
-            className="mt-1 block w-full rounded-md border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"
-            data-testid="txn-category"
-            {...register('category_id')}
-          >
-            <option value="">Select category...</option>
-            {filteredCategories?.map((cat: CategoryWithChildren) => {
-              const hasChildren = cat.children && cat.children.length > 0;
-              if (hasChildren) {
-                // Parent with sub-categories: only children are selectable
+        {/* To Account (transfers only) */}
+        {txnType === 'transfer' && (
+          <div>
+            <label htmlFor="to_account_id" className="block text-sm font-medium">
+              To Account
+            </label>
+            <select
+              id="to_account_id"
+              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"
+              data-testid="txn-to-account"
+              {...register('to_account_id')}
+            >
+              <option value="">Select destination...</option>
+              {accounts
+                ?.filter((acc: { id: string }) => acc.id !== watch('account_id'))
+                .map((acc: { id: string; name: string }) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name}
+                  </option>
+                ))}
+            </select>
+            {errors.to_account_id && (
+              <p className="mt-1 text-xs text-red-500">{errors.to_account_id.message}</p>
+            )}
+          </div>
+        )}
+
+        {/* Category (hidden for transfers) */}
+        {txnType !== 'transfer' && (
+          <div>
+            <label htmlFor="category_id" className="block text-sm font-medium">
+              Category
+            </label>
+            <select
+              id="category_id"
+              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"
+              data-testid="txn-category"
+              {...register('category_id')}
+            >
+              <option value="">Select category...</option>
+              {filteredCategories?.map((cat: CategoryWithChildren) => {
+                const hasChildren = cat.children && cat.children.length > 0;
+                if (hasChildren) {
+                  // Parent with sub-categories: only children are selectable
+                  return (
+                    <optgroup key={cat.id} label={cat.name}>
+                      {cat.children?.map((child) => (
+                        <option key={child.id} value={child.id}>
+                          {child.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                }
+                // Standalone category (no children): selectable
                 return (
-                  <optgroup key={cat.id} label={cat.name}>
-                    {cat.children?.map((child) => (
-                      <option key={child.id} value={child.id}>
-                        {child.name}
-                      </option>
-                    ))}
-                  </optgroup>
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
                 );
-              }
-              // Standalone category (no children): selectable
-              return (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              );
-            })}
-          </select>
-          {errors.category_id && (
-            <p className="mt-1 text-xs text-red-500">{errors.category_id.message}</p>
-          )}
-        </div>
+              })}
+            </select>
+            {errors.category_id && (
+              <p className="mt-1 text-xs text-red-500">{errors.category_id.message}</p>
+            )}
+          </div>
+        )}
 
         {/* Payment Method */}
         <div>

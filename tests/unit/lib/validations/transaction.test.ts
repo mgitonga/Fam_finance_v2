@@ -10,10 +10,12 @@ describe('transactionTypeEnum', () => {
   it('accepts income and expense', () => {
     expect(transactionTypeEnum.safeParse('income').success).toBe(true);
     expect(transactionTypeEnum.safeParse('expense').success).toBe(true);
+    expect(transactionTypeEnum.safeParse('transfer').success).toBe(true);
+    expect(transactionTypeEnum.safeParse('adjustment').success).toBe(true);
   });
 
   it('rejects invalid type', () => {
-    expect(transactionTypeEnum.safeParse('transfer').success).toBe(false);
+    expect(transactionTypeEnum.safeParse('refund').success).toBe(false);
   });
 });
 

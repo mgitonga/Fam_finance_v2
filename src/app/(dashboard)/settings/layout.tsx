@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils';
 
 const settingsTabs = [
   { href: '/settings/profile', label: 'Profile' },
-  { href: '/settings/accounts', label: 'Accounts' },
   { href: '/settings/categories', label: 'Categories' },
   { href: '/settings/users', label: 'Users' },
 ];

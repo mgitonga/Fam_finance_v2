@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
     // Aggregate spending by category_id
     const spendingMap = new Map<string, number>();
     (spending || []).forEach((tx) => {
+      if (!tx.category_id) return;
       const current = spendingMap.get(tx.category_id) || 0;
       spendingMap.set(tx.category_id, current + Number(tx.amount));
     });

@@ -22,6 +22,8 @@ export const PAYMENT_METHODS = [
 export const TRANSACTION_TYPES = [
   { value: 'income', label: 'Income' },
   { value: 'expense', label: 'Expense' },
+  { value: 'transfer', label: 'Transfer' },
+  { value: 'adjustment', label: 'Adjustment' },
 ] as const;
 
 export const BUDGET_THRESHOLDS = {

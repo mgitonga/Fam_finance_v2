@@ -14,7 +14,9 @@ import {
 import { useAccounts } from '@/hooks/use-accounts';
 import { useCategories } from '@/hooks/use-categories';
 import { formatKES, formatDate } from '@/lib/utils';
-import { Loader2, Plus, Trash2, Check, SkipForward, X, Calendar } from 'lucide-react';
+import { Loader2, Plus, Trash2, Check, SkipForward, Calendar } from 'lucide-react';
+import { DynamicIcon } from '@/components/ui/dynamic-icon';
+import { Modal } from '@/components/ui/modal';
 
 type Recurring = {
   id: string;
@@ -25,7 +27,7 @@ type Recurring = {
   next_due_date: string;
   category_id: string;
   account_id: string;
-  categories: { name: string; color: string | null } | null;
+  categories: { name: string; color: string | null; icon: string | null } | null;
   accounts: { name: string } | null;
 };
 
@@ -102,37 +104,25 @@ export default function RecurringPage() {
             Manage monthly recurring income and expenses.
           </p>
         </div>
-        {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white"
-            data-testid="add-recurring-btn"
-          >
-            <Plus className="h-4 w-4" /> Add Rule
-          </button>
-        )}
+        <button
+          onClick={() => setShowForm(true)}
+          className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white"
+          data-testid="add-recurring-btn"
+        >
+          <Plus className="h-4 w-4" /> Add Rule
+        </button>
       </div>
 
-      {showForm && (
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="mt-4 rounded-lg border bg-white p-4 dark:border-gray-800 dark:bg-gray-900"
-          data-testid="recurring-form"
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium">New Recurring Transaction</h3>
-            <button
-              type="button"
-              onClick={() => {
-                setShowForm(false);
-                reset();
-              }}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <Modal
+        open={showForm}
+        onClose={() => {
+          setShowForm(false);
+          reset();
+        }}
+        title="New Recurring Transaction"
+      >
+        <form onSubmit={handleSubmit(onSubmit)} data-testid="recurring-form">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <label className="block text-sm font-medium">Type</label>
               <select
@@ -230,7 +220,7 @@ export default function RecurringPage() {
               )}
             </div>
           </div>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-4 flex gap-2 border-t pt-4 dark:border-gray-800">
             <button
               type="submit"
               disabled={isSubmitting}
@@ -244,13 +234,13 @@ export default function RecurringPage() {
                 setShowForm(false);
                 reset();
               }}
-              className="rounded-md border px-4 py-2 text-sm"
+              className="rounded-md border px-4 py-2 text-sm dark:border-gray-700"
             >
               Cancel
             </button>
           </div>
         </form>
-      )}
+      </Modal>
 
       <div className="mt-6 space-y-3">
         {(!rules || rules.length === 0) && (
@@ -278,7 +268,10 @@ export default function RecurringPage() {
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" /> Day {rule.day_of_month} monthly
                     </span>
-                    <span>{rule.categories?.name}</span>
+                    <span className="flex items-center gap-1">
+                      <DynamicIcon name={rule.categories?.icon} className="h-3 w-3 text-gray-400" />
+                      {rule.categories?.name}
+                    </span>
                     <span>{rule.accounts?.name}</span>
                   </div>
                   <p className="mt-1 text-xs text-gray-400">

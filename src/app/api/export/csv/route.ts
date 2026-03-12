@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('transactions')
       .select(
-        'date, type, amount, description, merchant, payment_method, notes, categories(name), accounts(name)',
+        'date, type, amount, description, merchant, payment_method, notes, categories(name), accounts!transactions_account_id_fkey(name)',
       )
       .eq('household_id', auth.context.householdId)
       .order('date', { ascending: false });

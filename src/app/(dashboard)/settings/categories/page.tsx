@@ -15,7 +15,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  X,
   ChevronRight,
   Download,
   Upload,
@@ -23,6 +22,9 @@ import {
   XCircle,
   FileSpreadsheet,
 } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
+import { DynamicIcon } from '@/components/ui/dynamic-icon';
+import { IconPicker } from '@/components/ui/icon-picker';
 
 type CategoryWithChildren = {
   id: string;
@@ -72,11 +74,14 @@ export default function CategoriesSettingsPage() {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<CreateCategoryInput>({
     resolver: zodResolver(createCategorySchema),
     defaultValues: { name: '', type: 'expense', sort_order: 0 },
   });
+
+  const selectedIcon = watch('icon');
 
   function startCreate(pId?: string) {
     setEditingId(null);
@@ -243,37 +248,35 @@ export default function CategoriesSettingsPage() {
             Manage expense and income categories with sub-categories.
           </p>
         </div>
-        {!showForm && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-1 rounded-md border px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
-              data-testid="export-categories-btn"
-            >
-              <Download className="h-4 w-4" /> Export CSV
-            </button>
-            <label
-              className="flex cursor-pointer items-center gap-1 rounded-md border px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
-              data-testid="import-categories-btn"
-            >
-              <Upload className="h-4 w-4" /> Import CSV
-              <input
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={handleImportUpload}
-                disabled={importLoading}
-              />
-            </label>
-            <button
-              onClick={() => startCreate()}
-              className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white"
-              data-testid="add-category-btn"
-            >
-              <Plus className="h-4 w-4" /> Add Category
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-1 rounded-md border px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
+            data-testid="export-categories-btn"
+          >
+            <Download className="h-4 w-4" /> Export CSV
+          </button>
+          <label
+            className="flex cursor-pointer items-center gap-1 rounded-md border px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
+            data-testid="import-categories-btn"
+          >
+            <Upload className="h-4 w-4" /> Import CSV
+            <input
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleImportUpload}
+              disabled={importLoading}
+            />
+          </label>
+          <button
+            onClick={() => startCreate()}
+            className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white"
+            data-testid="add-category-btn"
+          >
+            <Plus className="h-4 w-4" /> Add Category
+          </button>
+        </div>
       </div>
 
       {/* Import error */}
@@ -403,25 +406,13 @@ export default function CategoriesSettingsPage() {
         </div>
       )}
 
-      {showForm && (
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="mt-4 rounded-lg border bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900"
-          data-testid="category-form"
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium">
-              {editingId ? 'Edit Category' : parentId ? 'New Sub-Category' : 'New Category'}
-            </h3>
-            <button
-              type="button"
-              onClick={cancelForm}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+      <Modal
+        open={showForm}
+        onClose={cancelForm}
+        title={editingId ? 'Edit Category' : parentId ? 'New Sub-Category' : 'New Category'}
+      >
+        <form onSubmit={handleSubmit(onSubmit)} data-testid="category-form">
+          <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <label htmlFor="cat-name" className="block text-sm font-medium">
                 Name
@@ -466,7 +457,15 @@ export default function CategoriesSettingsPage() {
               {errors.color && <p className="mt-1 text-xs text-red-500">{errors.color.message}</p>}
             </div>
           </div>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3">
+            <label className="block text-sm font-medium">Icon</label>
+            <IconPicker
+              value={selectedIcon ?? null}
+              onChange={(icon) => setValue('icon', icon)}
+              className="mt-1"
+            />
+          </div>
+          <div className="mt-4 flex gap-2 border-t pt-4 dark:border-gray-800">
             <button
               type="submit"
               disabled={isSubmitting}
@@ -479,13 +478,13 @@ export default function CategoriesSettingsPage() {
             <button
               type="button"
               onClick={cancelForm}
-              className="rounded-md border px-4 py-2 text-sm"
+              className="rounded-md border px-4 py-2 text-sm dark:border-gray-700"
             >
               Cancel
             </button>
           </div>
         </form>
-      )}
+      </Modal>
 
       <div className="mt-4 space-y-1">
         {categories?.length === 0 && <p className="text-sm text-gray-500">No categories found.</p>}
@@ -496,6 +495,7 @@ export default function CategoriesSettingsPage() {
               data-testid="category-row"
             >
               <div className="flex items-center gap-2">
+                <DynamicIcon name={cat.icon} className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 {cat.color && (
                   <span
                     className="inline-block h-3 w-3 rounded-full"
@@ -538,6 +538,7 @@ export default function CategoriesSettingsPage() {
                   >
                     <div className="flex items-center gap-2">
                       <ChevronRight className="h-3 w-3 text-gray-400" />
+                      <DynamicIcon name={child.icon} className="h-3.5 w-3.5 text-gray-400" />
                       <span className="text-sm">{child.name}</span>
                     </div>
                     <div className="flex items-center gap-1">

@@ -11,7 +11,7 @@ export async function GET() {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from('bill_reminders')
-      .select('*, categories(name, color)')
+      .select('*, categories(name, color, icon)')
       .eq('household_id', auth.context.householdId)
       .eq('is_active', true)
       .order('due_day', { ascending: true });
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         ...parsed.data,
         household_id: auth.context.householdId,
       })
-      .select('*, categories(name, color)')
+      .select('*, categories(name, color, icon)')
       .single();
 
     if (error) {

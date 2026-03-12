@@ -1,10 +1,12 @@
 import { cn } from '@/lib/utils';
 import { formatKES } from '@/lib/utils';
 import { getBudgetStatus } from '@/lib/validations/budget';
+import { DynamicIcon } from '@/components/ui/dynamic-icon';
 
 interface BudgetProgressProps {
   categoryName: string;
   categoryColor?: string | null;
+  categoryIcon?: string | null;
   spent: number;
   budget: number;
 }
@@ -12,6 +14,7 @@ interface BudgetProgressProps {
 export function BudgetProgress({
   categoryName,
   categoryColor,
+  categoryIcon,
   spent,
   budget,
 }: BudgetProgressProps) {
@@ -31,6 +34,10 @@ export function BudgetProgress({
     <div className="space-y-1.5" data-testid="budget-progress">
       <div className="flex items-center justify-between text-sm">
         <span className="flex items-center gap-2">
+          <DynamicIcon
+            name={categoryIcon}
+            className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400"
+          />
           {categoryColor && (
             <span
               className="inline-block h-2.5 w-2.5 rounded-full"

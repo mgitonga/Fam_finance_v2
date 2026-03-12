@@ -1,7 +1,11 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateSavingsGoalInput, AddContributionInput } from '@/lib/validations/savings-debt';
+import type {
+  CreateSavingsGoalInput,
+  UpdateSavingsGoalInput,
+  AddContributionInput,
+} from '@/lib/validations/savings-debt';
 
 const KEY = ['savings'];
 
@@ -44,6 +48,22 @@ export function useDeleteSavingsGoal() {
   });
 }
 
+export function useUpdateSavingsGoal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateSavingsGoalInput }) => {
+      const res = await fetch(`/api/savings/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      return res.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
 export function useContributions(goalId: string) {
   return useQuery({
     queryKey: [...KEY, goalId, 'contributions'],
@@ -68,6 +88,9 @@ export function useAddContribution() {
       if (!res.ok) throw new Error((await res.json()).error || 'Failed');
       return res.json();
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY });
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+    },
   });
 }

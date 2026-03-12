@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
 
     const spending = new Map<string, number>();
     for (const t of txnRes.data || []) {
+      if (!t.category_id) continue;
       const parentId = childToParent.get(t.category_id) || t.category_id;
       spending.set(parentId, (spending.get(parentId) || 0) + Number(t.amount));
     }

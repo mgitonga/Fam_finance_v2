@@ -37,7 +37,9 @@ export async function GET(request: NextRequest) {
     // Get transactions for the month
     const { data: transactions } = await supabase
       .from('transactions')
-      .select('type, amount, date, description, merchant, categories(name), accounts(name)')
+      .select(
+        'type, amount, date, description, merchant, categories(name), accounts!transactions_account_id_fkey(name)',
+      )
       .eq('household_id', hid)
       .gte('date', startDate)
       .lt('date', endDate)

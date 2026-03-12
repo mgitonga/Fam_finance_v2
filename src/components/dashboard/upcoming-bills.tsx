@@ -2,6 +2,7 @@
 
 import { formatKES } from '@/lib/utils';
 import { Bell } from 'lucide-react';
+import { DynamicIcon } from '@/components/ui/dynamic-icon';
 
 type Bill = {
   id: string;
@@ -9,7 +10,7 @@ type Bill = {
   amount: number | null;
   due_day: number;
   daysLeft: number;
-  categories: { name: string } | null;
+  categories: { name: string; icon: string | null } | null;
 };
 
 interface UpcomingBillsProps {
@@ -46,7 +47,10 @@ export function UpcomingBills({ bills }: UpcomingBillsProps) {
                 <div>
                   <p className="text-sm font-medium">{bill.name}</p>
                   <p className="text-xs text-gray-500">
-                    {bill.categories?.name || `Day ${bill.due_day}`}
+                    <span className="inline-flex items-center gap-1">
+                      <DynamicIcon name={bill.categories?.icon} className="h-3 w-3" />
+                      {bill.categories?.name || `Day ${bill.due_day}`}
+                    </span>
                   </p>
                 </div>
               </div>

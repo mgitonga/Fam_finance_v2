@@ -22,7 +22,9 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('transactions')
-      .select('*, categories(name, color), accounts(name)', { count: 'exact' })
+      .select('*, categories(name, color, icon), accounts!transactions_account_id_fkey(name)', {
+        count: 'exact',
+      })
       .eq('household_id', auth.context.householdId);
 
     // Filters
@@ -107,32 +109,63 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Account not found' }, { status: 400 });
     }
 
-    // Verify category is selectable (not a parent that has sub-categories)
-    const { data: category } = await supabase
-      .from('categories')
-      .select('id, name')
-      .eq('id', parsed.data.category_id)
-      .eq('household_id', auth.context.householdId)
-      .single();
-
-    if (!category) {
-      return NextResponse.json({ error: 'Category not found' }, { status: 400 });
+    // Overdraft protection: check balance for expense and transfer types
+    if (parsed.data.type === 'expense' || parsed.data.type === 'transfer') {
+      if (Number(account.balance) < parsed.data.amount) {
+        return NextResponse.json(
+          {
+            error: `Insufficient balance. Account has KES ${Number(account.balance).toLocaleString()} but transaction requires KES ${parsed.data.amount.toLocaleString()}.`,
+          },
+          { status: 400 },
+        );
+      }
     }
 
-    const { count: childCount } = await supabase
-      .from('categories')
-      .select('id', { count: 'exact', head: true })
-      .eq('parent_id', parsed.data.category_id)
-      .eq('household_id', auth.context.householdId)
-      .eq('is_active', true);
+    // For transfers, verify destination account
+    let toAccount: { id: string; balance: number } | null = null;
+    if (parsed.data.type === 'transfer') {
+      const { data: destAccount } = await supabase
+        .from('accounts')
+        .select('id, balance')
+        .eq('id', parsed.data.to_account_id!)
+        .eq('household_id', auth.context.householdId)
+        .single();
 
-    if (childCount && childCount > 0) {
-      return NextResponse.json(
-        {
-          error: `"${category.name}" has sub-categories. Please select a specific sub-category instead.`,
-        },
-        { status: 400 },
-      );
+      if (!destAccount) {
+        return NextResponse.json({ error: 'Destination account not found' }, { status: 400 });
+      }
+      toAccount = destAccount;
+    }
+
+    // Verify category is selectable (not a parent that has sub-categories)
+    // Category not required for transfers and adjustments
+    if (parsed.data.category_id) {
+      const { data: category } = await supabase
+        .from('categories')
+        .select('id, name')
+        .eq('id', parsed.data.category_id)
+        .eq('household_id', auth.context.householdId)
+        .single();
+
+      if (!category) {
+        return NextResponse.json({ error: 'Category not found' }, { status: 400 });
+      }
+
+      const { count: childCount } = await supabase
+        .from('categories')
+        .select('id', { count: 'exact', head: true })
+        .eq('parent_id', parsed.data.category_id)
+        .eq('household_id', auth.context.householdId)
+        .eq('is_active', true);
+
+      if (childCount && childCount > 0) {
+        return NextResponse.json(
+          {
+            error: `"${category.name}" has sub-categories. Please select a specific sub-category instead.`,
+          },
+          { status: 400 },
+        );
+      }
     }
 
     // If linked to a debt, validate the debt and block overpayment
@@ -168,19 +201,34 @@ export async function POST(request: NextRequest) {
         household_id: auth.context.householdId,
         user_id: auth.context.userId,
       })
-      .select('*, categories(name, color), accounts(name)')
+      .select('*, categories(name, color, icon), accounts!transactions_account_id_fkey(name)')
       .single();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Update account balance
-    const balanceChange = parsed.data.type === 'income' ? parsed.data.amount : -parsed.data.amount;
-    await supabase
-      .from('accounts')
-      .update({ balance: account.balance + balanceChange })
-      .eq('id', parsed.data.account_id);
+    // Update account balance(s)
+    if (parsed.data.type === 'transfer') {
+      // Debit source, credit destination
+      await supabase
+        .from('accounts')
+        .update({ balance: Number(account.balance) - parsed.data.amount })
+        .eq('id', parsed.data.account_id);
+      if (toAccount) {
+        await supabase
+          .from('accounts')
+          .update({ balance: Number(toAccount.balance) + parsed.data.amount })
+          .eq('id', parsed.data.to_account_id!);
+      }
+    } else if (parsed.data.type !== 'adjustment') {
+      const balanceChange =
+        parsed.data.type === 'income' ? parsed.data.amount : -parsed.data.amount;
+      await supabase
+        .from('accounts')
+        .update({ balance: Number(account.balance) + balanceChange })
+        .eq('id', parsed.data.account_id);
+    }
 
     // If this transaction is linked to a debt, update the debt balance
     let isPayoff = false;

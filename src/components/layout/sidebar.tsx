@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   ArrowLeftRight,
+  Landmark,
   PiggyBank,
   Repeat,
   Target,
@@ -16,13 +17,15 @@ import {
   Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Logo } from '@/components/ui/logo';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
-  { href: '/budgets', label: 'Budgets', icon: PiggyBank },
+  { href: '/accounts', label: 'Accounts', icon: Landmark },
+  { href: '/budgets', label: 'Budgets', icon: Target },
   { href: '/recurring', label: 'Recurring', icon: Repeat },
-  { href: '/savings', label: 'Savings', icon: Target },
+  { href: '/savings', label: 'Savings', icon: PiggyBank },
   { href: '/debts', label: 'Debts', icon: CreditCard },
   { href: '/bills', label: 'Bills', icon: Bell },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
@@ -37,8 +40,8 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:bg-gray-50 dark:lg:bg-gray-900">
       <div className="flex h-16 items-center border-b px-6">
-        <Link href="/dashboard" className="text-primary text-xl font-bold">
-          FamFin
+        <Link href="/dashboard">
+          <Logo size={28} />
         </Link>
       </div>
       <nav className="flex-1 space-y-1 px-3 py-4" data-testid="sidebar-nav">

@@ -12,7 +12,8 @@ import {
 } from '@/hooks/use-accounts';
 import { ACCOUNT_TYPES } from '@/lib/constants';
 import { formatKES } from '@/lib/utils';
-import { Loader2, Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
 
 export default function AccountsSettingsPage() {
   const { data: accounts, isLoading } = useAccounts();
@@ -86,34 +87,22 @@ export default function AccountsSettingsPage() {
             Manage your financial accounts (bank, M-Pesa, cash, etc.)
           </p>
         </div>
-        {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white"
-            data-testid="add-account-btn"
-          >
-            <Plus className="h-4 w-4" /> Add Account
-          </button>
-        )}
+        <button
+          onClick={() => setShowForm(true)}
+          className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white"
+          data-testid="add-account-btn"
+        >
+          <Plus className="h-4 w-4" /> Add Account
+        </button>
       </div>
 
-      {showForm && (
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="mt-4 rounded-lg border bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900"
-          data-testid="account-form"
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium">{editingId ? 'Edit Account' : 'New Account'}</h3>
-            <button
-              type="button"
-              onClick={cancelForm}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+      <Modal
+        open={showForm}
+        onClose={cancelForm}
+        title={editingId ? 'Edit Account' : 'New Account'}
+      >
+        <form onSubmit={handleSubmit(onSubmit)} data-testid="account-form">
+          <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <label htmlFor="name" className="block text-sm font-medium">
                 Name
@@ -159,7 +148,7 @@ export default function AccountsSettingsPage() {
               />
             </div>
           </div>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-4 flex gap-2 border-t pt-4 dark:border-gray-800">
             <button
               type="submit"
               disabled={isSubmitting}
@@ -172,13 +161,13 @@ export default function AccountsSettingsPage() {
             <button
               type="button"
               onClick={cancelForm}
-              className="rounded-md border px-4 py-2 text-sm"
+              className="rounded-md border px-4 py-2 text-sm dark:border-gray-700"
             >
               Cancel
             </button>
           </div>
         </form>
-      )}
+      </Modal>
 
       <div className="mt-4 space-y-2">
         {accounts?.length === 0 && (

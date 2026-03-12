@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Bell, LogOut, Menu, User, Check } from 'lucide-react';
-import { APP_NAME } from '@/lib/constants';
+import { Logo } from '@/components/ui/logo';
 import { logout } from '@/lib/supabase/auth-actions';
 import { useAuth } from '@/providers/auth-provider';
 import { useNotifications, useMarkRead, useMarkAllRead } from '@/hooks/use-notifications';
@@ -38,8 +38,8 @@ export function Header({ onMenuToggle }: HeaderProps) {
         >
           <Menu className="h-5 w-5" />
         </button>
-        <Link href="/dashboard" className="text-primary text-xl font-bold lg:hidden">
-          {APP_NAME}
+        <Link href="/dashboard" className="lg:hidden">
+          <Logo size={28} />
         </Link>
       </div>
 

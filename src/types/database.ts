@@ -278,33 +278,46 @@ export type Database = {
       };
       goal_contributions: {
         Row: {
+          account_id: string;
           amount: number;
           created_at: string;
           date: string;
           goal_id: string;
           id: string;
           notes: string | null;
+          type: string;
           user_id: string;
         };
         Insert: {
+          account_id: string;
           amount: number;
           created_at?: string;
           date: string;
           goal_id: string;
           id?: string;
           notes?: string | null;
+          type?: string;
           user_id: string;
         };
         Update: {
+          account_id?: string;
           amount?: number;
           created_at?: string;
           date?: string;
           goal_id?: string;
           id?: string;
           notes?: string | null;
+          type?: string;
           user_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'goal_contributions_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'goal_contributions_goal_id_fkey';
             columns: ['goal_id'];
@@ -315,6 +328,63 @@ export type Database = {
           {
             foreignKeyName: 'goal_contributions_user_id_fkey';
             columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      household_invites: {
+        Row: {
+          accepted_at: string | null;
+          cancelled_at: string | null;
+          email: string;
+          expires_at: string;
+          household_id: string;
+          id: string;
+          invited_at: string;
+          invited_by: string;
+          name: string;
+          role: string;
+          status: string;
+        };
+        Insert: {
+          accepted_at?: string | null;
+          cancelled_at?: string | null;
+          email: string;
+          expires_at?: string;
+          household_id: string;
+          id?: string;
+          invited_at?: string;
+          invited_by: string;
+          name: string;
+          role?: string;
+          status?: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          cancelled_at?: string | null;
+          email?: string;
+          expires_at?: string;
+          household_id?: string;
+          id?: string;
+          invited_at?: string;
+          invited_by?: string;
+          name?: string;
+          role?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'household_invites_household_id_fkey';
+            columns: ['household_id'];
+            isOneToOne: false;
+            referencedRelation: 'households';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'household_invites_invited_by_fkey';
+            columns: ['invited_by'];
             isOneToOne: false;
             referencedRelation: 'users';
             referencedColumns: ['id'];
@@ -546,7 +616,7 @@ export type Database = {
         Row: {
           account_id: string;
           amount: number;
-          category_id: string;
+          category_id: string | null;
           created_at: string;
           date: string;
           debt_id: string | null;
@@ -562,6 +632,7 @@ export type Database = {
           split_ratio: number | null;
           split_with: string | null;
           tags: string[] | null;
+          to_account_id: string | null;
           type: string;
           updated_at: string;
           user_id: string;
@@ -569,7 +640,7 @@ export type Database = {
         Insert: {
           account_id: string;
           amount: number;
-          category_id: string;
+          category_id?: string | null;
           created_at?: string;
           date: string;
           debt_id?: string | null;
@@ -585,6 +656,7 @@ export type Database = {
           split_ratio?: number | null;
           split_with?: string | null;
           tags?: string[] | null;
+          to_account_id?: string | null;
           type: string;
           updated_at?: string;
           user_id: string;
@@ -592,7 +664,7 @@ export type Database = {
         Update: {
           account_id?: string;
           amount?: number;
-          category_id?: string;
+          category_id?: string | null;
           created_at?: string;
           date?: string;
           debt_id?: string | null;
@@ -608,6 +680,7 @@ export type Database = {
           split_ratio?: number | null;
           split_with?: string | null;
           tags?: string[] | null;
+          to_account_id?: string | null;
           type?: string;
           updated_at?: string;
           user_id?: string;
@@ -632,6 +705,13 @@ export type Database = {
             columns: ['category_id'];
             isOneToOne: false;
             referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'transactions_to_account_id_fkey';
+            columns: ['to_account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
             referencedColumns: ['id'];
           },
           {

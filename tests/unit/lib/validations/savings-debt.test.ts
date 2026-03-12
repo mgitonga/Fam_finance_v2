@@ -43,13 +43,43 @@ describe('createSavingsGoalSchema', () => {
 
 describe('addContributionSchema', () => {
   it('accepts valid contribution', () => {
-    expect(addContributionSchema.safeParse({ amount: 5000, date: '2026-03-01' }).success).toBe(
-      true,
-    );
+    expect(
+      addContributionSchema.safeParse({
+        amount: 5000,
+        date: '2026-03-01',
+        account_id: '550e8400-e29b-41d4-a716-446655440000',
+        type: 'deposit',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('accepts valid withdrawal', () => {
+    expect(
+      addContributionSchema.safeParse({
+        amount: 2000,
+        date: '2026-03-01',
+        account_id: '550e8400-e29b-41d4-a716-446655440000',
+        type: 'withdrawal',
+      }).success,
+    ).toBe(true);
   });
 
   it('rejects zero amount', () => {
-    expect(addContributionSchema.safeParse({ amount: 0, date: '2026-03-01' }).success).toBe(false);
+    expect(
+      addContributionSchema.safeParse({
+        amount: 0,
+        date: '2026-03-01',
+        account_id: '550e8400-e29b-41d4-a716-446655440000',
+        type: 'deposit',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects missing account_id', () => {
+    expect(
+      addContributionSchema.safeParse({ amount: 5000, date: '2026-03-01', type: 'deposit' })
+        .success,
+    ).toBe(false);
   });
 });
 

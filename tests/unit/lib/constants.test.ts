@@ -44,7 +44,7 @@ describe('constants', () => {
 
   it('has income and expense transaction types', () => {
     const types = TRANSACTION_TYPES.map((t) => t.value);
-    expect(types).toEqual(['income', 'expense']);
+    expect(types).toEqual(['income', 'expense', 'transfer', 'adjustment']);
   });
 
   it('has correct budget thresholds', () => {

@@ -16,9 +16,13 @@ export const createSavingsGoalSchema = z.object({
 
 export const updateSavingsGoalSchema = createSavingsGoalSchema.partial();
 
+export const contributionTypeEnum = z.enum(['deposit', 'withdrawal']);
+
 export const addContributionSchema = z.object({
   amount: z.number().positive('Amount must be greater than 0'),
   date: z.string().min(1, 'Date is required'),
+  account_id: z.string().uuid('Please select an account'),
+  type: contributionTypeEnum,
   notes: z.string().max(500).nullable().optional(),
 });
 

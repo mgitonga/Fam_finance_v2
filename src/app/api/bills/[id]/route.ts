@@ -30,7 +30,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       .update(parsed.data)
       .eq('id', id)
       .eq('household_id', auth.context.householdId)
-      .select('*, categories(name, color)')
+      .select('*, categories(name, color, icon)')
       .single();
 
     if (error) {

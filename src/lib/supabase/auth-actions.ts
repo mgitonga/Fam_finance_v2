@@ -141,6 +141,89 @@ export async function getUser() {
   return user;
 }
 
+export async function acceptInvite(formData: { name: string; password: string }) {
+  const supabase = await createClient();
+
+  // Get the current authenticated user (set via invite link callback)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: 'Not authenticated. Please use the invite link from your email.' };
+  }
+
+  const metadata = user.user_metadata;
+  const householdId = metadata?.household_id;
+
+  if (!householdId) {
+    return { error: 'Invalid invite. No household information found.' };
+  }
+
+  // Check invite status in household_invites
+  const adminClient = createAdminClient();
+
+  const { data: invite } = await adminClient
+    .from('household_invites')
+    .select('id, status')
+    .eq('email', user.email!)
+    .eq('household_id', householdId)
+    .in('status', ['pending', 'cancelled', 'expired'])
+    .order('invited_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (invite?.status === 'cancelled') {
+    return {
+      error: 'This invitation has been cancelled. Please contact the household admin.',
+    };
+  }
+
+  if (invite?.status === 'expired') {
+    return {
+      error: 'This invitation has expired. Please ask the household admin to resend the invite.',
+    };
+  }
+
+  // Set the user's password
+  const { error: passwordError } = await supabase.auth.updateUser({
+    password: formData.password,
+    data: { name: formData.name },
+  });
+
+  if (passwordError) {
+    return { error: `Failed to set password: ${passwordError.message}` };
+  }
+
+  // Link user to household (the trigger may have already done this, but ensure it)
+  const { error: updateError } = await adminClient
+    .from('users')
+    .update({
+      household_id: householdId,
+      role: metadata.role || 'contributor',
+      name: formData.name,
+    })
+    .eq('id', user.id);
+
+  if (updateError) {
+    return { error: 'Failed to join household. Please try again.' };
+  }
+
+  // Mark invite as accepted
+  if (invite) {
+    await adminClient
+      .from('household_invites')
+      .update({
+        status: 'accepted',
+        accepted_at: new Date().toISOString(),
+      })
+      .eq('id', invite.id);
+  }
+
+  revalidatePath('/', 'layout');
+  redirect('/dashboard');
+}
+
 export async function getUserProfile() {
   const supabase = await createClient();
   const {

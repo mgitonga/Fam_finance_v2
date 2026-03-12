@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
     // Aggregate by parent category
     const spending = new Map<string, number>();
     for (const t of transactions) {
+      if (!t.category_id) continue;
       const parentId = childToParent.get(t.category_id) || t.category_id;
       spending.set(parentId, (spending.get(parentId) || 0) + Number(t.amount));
     }

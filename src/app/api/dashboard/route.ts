@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       // Bill reminders
       supabase
         .from('bill_reminders')
-        .select('id, name, amount, due_day, categories(name)')
+        .select('id, name, amount, due_day, categories(name, icon)')
         .eq('household_id', hid)
         .eq('is_active', true)
         .order('due_day', { ascending: true })
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       // Recent transactions (last 10)
       supabase
         .from('transactions')
-        .select('id, type, amount, date, description, merchant, categories(name, color)')
+        .select('id, type, amount, date, description, merchant, categories(name, color, icon)')
         .eq('household_id', hid)
         .order('date', { ascending: false })
         .order('created_at', { ascending: false })
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
 
     const spendingByParent = new Map<string, number>();
     for (const txn of transactions) {
-      if (txn.type === 'expense') {
+      if (txn.type === 'expense' && txn.category_id) {
         const parentId = childToParentMap.get(txn.category_id) || txn.category_id;
         spendingByParent.set(parentId, (spendingByParent.get(parentId) || 0) + Number(txn.amount));
       }

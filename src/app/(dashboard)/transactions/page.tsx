@@ -28,6 +28,7 @@ import {
   Filter,
   Link2,
 } from 'lucide-react';
+import { DynamicIcon } from '@/components/ui/dynamic-icon';
 
 type Transaction = {
   id: string;
@@ -43,7 +44,7 @@ type Transaction = {
   debt_id: string | null;
   notes: string | null;
   tags: string[] | null;
-  categories: { name: string; color: string | null } | null;
+  categories: { name: string; color: string | null; icon: string | null } | null;
   accounts: { name: string } | null;
 };
 
@@ -347,6 +348,10 @@ export default function TransactionsPage() {
                     </td>
                     <td className="px-3 py-3">
                       <span className="flex items-center gap-1.5">
+                        <DynamicIcon
+                          name={tx.categories?.icon}
+                          className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400"
+                        />
                         {tx.categories?.color && (
                           <span
                             className="inline-block h-2.5 w-2.5 rounded-full"

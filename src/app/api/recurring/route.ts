@@ -12,7 +12,7 @@ export async function GET() {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from('recurring_transactions')
-      .select('*, categories(name, color), accounts(name)')
+      .select('*, categories(name, color, icon), accounts(name)')
       .eq('household_id', auth.context.householdId)
       .eq('is_active', true)
       .order('next_due_date', { ascending: true });
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         household_id: auth.context.householdId,
         next_due_date: nextDueDate,
       })
-      .select('*, categories(name, color), accounts(name)')
+      .select('*, categories(name, color, icon), accounts(name)')
       .single();
 
     if (error) {

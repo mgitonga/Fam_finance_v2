@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('transactions')
-      .select('*, categories(name, color), accounts!transactions_account_id_fkey(name)', {
+      .select('*, categories(name, color, icon), accounts!transactions_account_id_fkey(name)', {
         count: 'exact',
       })
       .eq('household_id', auth.context.householdId);
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
         household_id: auth.context.householdId,
         user_id: auth.context.userId,
       })
-      .select('*, categories(name, color), accounts!transactions_account_id_fkey(name)')
+      .select('*, categories(name, color, icon), accounts!transactions_account_id_fkey(name)')
       .single();
 
     if (error) {

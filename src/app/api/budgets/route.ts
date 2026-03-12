@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     // Get budgets for the month (budgets are set on parent categories)
     const { data: budgets, error } = await supabase
       .from('budgets')
-      .select('*, categories(id, name, color, type, parent_id)')
+      .select('*, categories(id, name, color, icon, type, parent_id)')
       .eq('household_id', auth.context.householdId)
       .eq('month', month)
       .eq('year', year)
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
           onConflict: 'household_id,category_id,month,year',
         },
       )
-      .select('*, categories(name, color, type)')
+      .select('*, categories(name, color, icon, type)')
       .single();
 
     if (error) {

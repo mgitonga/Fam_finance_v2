@@ -15,6 +15,7 @@ import { useAccounts } from '@/hooks/use-accounts';
 import { useCategories } from '@/hooks/use-categories';
 import { formatKES, formatDate } from '@/lib/utils';
 import { Loader2, Plus, Trash2, Check, SkipForward, Calendar } from 'lucide-react';
+import { DynamicIcon } from '@/components/ui/dynamic-icon';
 import { Modal } from '@/components/ui/modal';
 
 type Recurring = {
@@ -26,7 +27,7 @@ type Recurring = {
   next_due_date: string;
   category_id: string;
   account_id: string;
-  categories: { name: string; color: string | null } | null;
+  categories: { name: string; color: string | null; icon: string | null } | null;
   accounts: { name: string } | null;
 };
 
@@ -267,7 +268,10 @@ export default function RecurringPage() {
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" /> Day {rule.day_of_month} monthly
                     </span>
-                    <span>{rule.categories?.name}</span>
+                    <span className="flex items-center gap-1">
+                      <DynamicIcon name={rule.categories?.icon} className="h-3 w-3 text-gray-400" />
+                      {rule.categories?.name}
+                    </span>
                     <span>{rule.accounts?.name}</span>
                   </div>
                   <p className="mt-1 text-xs text-gray-400">

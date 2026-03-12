@@ -3,6 +3,7 @@
 import { formatKES, formatDate } from '@/lib/utils';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
+import { DynamicIcon } from '@/components/ui/dynamic-icon';
 
 type Transaction = {
   id: string;
@@ -11,7 +12,7 @@ type Transaction = {
   date: string;
   description: string | null;
   merchant: string | null;
-  categories: { name: string; color: string | null } | null;
+  categories: { name: string; color: string | null; icon: string | null } | null;
 };
 
 interface RecentTransactionsProps {
@@ -40,6 +41,10 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
           transactions.map((txn) => (
             <div key={txn.id} className="flex items-center justify-between px-4 py-2.5">
               <div className="flex items-center gap-2">
+                <DynamicIcon
+                  name={txn.categories?.icon}
+                  className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400"
+                />
                 {txn.categories?.color && (
                   <span
                     className="inline-block h-2 w-2 rounded-full"

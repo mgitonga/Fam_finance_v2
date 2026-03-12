@@ -18,7 +18,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from('transactions')
-      .select('*, categories(name, color), accounts!transactions_account_id_fkey(name)')
+      .select('*, categories(name, color, icon), accounts!transactions_account_id_fkey(name)')
       .eq('id', id)
       .eq('household_id', auth.context.householdId)
       .single();
@@ -133,7 +133,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       .from('transactions')
       .update(parsed.data)
       .eq('id', id)
-      .select('*, categories(name, color), accounts!transactions_account_id_fkey(name)')
+      .select('*, categories(name, color, icon), accounts!transactions_account_id_fkey(name)')
       .single();
 
     if (error) {

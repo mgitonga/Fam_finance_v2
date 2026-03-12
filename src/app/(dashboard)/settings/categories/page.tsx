@@ -23,6 +23,8 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
+import { DynamicIcon } from '@/components/ui/dynamic-icon';
+import { IconPicker } from '@/components/ui/icon-picker';
 
 type CategoryWithChildren = {
   id: string;
@@ -72,11 +74,14 @@ export default function CategoriesSettingsPage() {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<CreateCategoryInput>({
     resolver: zodResolver(createCategorySchema),
     defaultValues: { name: '', type: 'expense', sort_order: 0 },
   });
+
+  const selectedIcon = watch('icon');
 
   function startCreate(pId?: string) {
     setEditingId(null);
@@ -452,6 +457,14 @@ export default function CategoriesSettingsPage() {
               {errors.color && <p className="mt-1 text-xs text-red-500">{errors.color.message}</p>}
             </div>
           </div>
+          <div className="mt-3">
+            <label className="block text-sm font-medium">Icon</label>
+            <IconPicker
+              value={selectedIcon ?? null}
+              onChange={(icon) => setValue('icon', icon)}
+              className="mt-1"
+            />
+          </div>
           <div className="mt-4 flex gap-2 border-t pt-4 dark:border-gray-800">
             <button
               type="submit"
@@ -482,6 +495,7 @@ export default function CategoriesSettingsPage() {
               data-testid="category-row"
             >
               <div className="flex items-center gap-2">
+                <DynamicIcon name={cat.icon} className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 {cat.color && (
                   <span
                     className="inline-block h-3 w-3 rounded-full"
@@ -524,6 +538,7 @@ export default function CategoriesSettingsPage() {
                   >
                     <div className="flex items-center gap-2">
                       <ChevronRight className="h-3 w-3 text-gray-400" />
+                      <DynamicIcon name={child.icon} className="h-3.5 w-3.5 text-gray-400" />
                       <span className="text-sm">{child.name}</span>
                     </div>
                     <div className="flex items-center gap-1">

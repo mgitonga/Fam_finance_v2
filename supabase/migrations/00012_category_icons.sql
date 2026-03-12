@@ -1,10 +1,57 @@
 -- ============================================
--- FamFin Seed Data
--- Default categories function + test data
--- Synced with production DB 2026-03-12
+-- Migration: 00012_category_icons
+-- Adds Lucide icon names to all categories
+-- and updates seed function with new categories
 -- ============================================
 
--- Function to seed default categories for a household
+-- 1. Update existing categories with icons (only where icon is NULL)
+UPDATE categories SET icon = 'shopping-cart'       WHERE name = 'Food & Groceries'        AND icon IS NULL;
+UPDATE categories SET icon = 'package'             WHERE name = 'Household Goods'          AND icon IS NULL;
+UPDATE categories SET icon = 'apple'               WHERE name = 'Fruit & Veg'              AND icon IS NULL;
+UPDATE categories SET icon = 'utensils'            WHERE name = 'Dining'                   AND icon IS NULL;
+UPDATE categories SET icon = 'truck'               WHERE name = 'Order In'                 AND icon IS NULL;
+UPDATE categories SET icon = 'chef-hat'            WHERE name = 'Eating Out'               AND icon IS NULL;
+UPDATE categories SET icon = 'users'               WHERE name = 'Hosting'                  AND icon IS NULL;
+UPDATE categories SET icon = 'home'                WHERE name = 'Housing'                  AND icon IS NULL;
+UPDATE categories SET icon = 'key-round'           WHERE name = 'Rent'                     AND icon IS NULL;
+UPDATE categories SET icon = 'hammer'              WHERE name = 'House Repairs'             AND icon IS NULL;
+UPDATE categories SET icon = 'car'                 WHERE name = 'Transport'                AND icon IS NULL;
+UPDATE categories SET icon = 'bus'                 WHERE name = 'Matatu Fare'              AND icon IS NULL;
+UPDATE categories SET icon = 'car-taxi-front'      WHERE name = 'Taxi Hailing'             AND icon IS NULL;
+UPDATE categories SET icon = 'fuel'                WHERE name = 'Fuel'                     AND icon IS NULL;
+UPDATE categories SET icon = 'wrench'              WHERE name = 'Car Maintenance'          AND icon IS NULL;
+UPDATE categories SET icon = 'zap'                 WHERE name = 'Utilities & Subscriptions' AND icon IS NULL;
+UPDATE categories SET icon = 'zap'                 WHERE name = 'Utilities'                AND icon IS NULL;
+UPDATE categories SET icon = 'droplets'            WHERE name = 'Water'                    AND icon IS NULL;
+UPDATE categories SET icon = 'plug-zap'            WHERE name = 'Electricity'              AND icon IS NULL;
+UPDATE categories SET icon = 'wifi'                WHERE name = 'Broadband Internet'       AND icon IS NULL;
+UPDATE categories SET icon = 'film'                WHERE name = 'Entertainment'            AND icon IS NULL;
+UPDATE categories SET icon = 'heart-pulse'         WHERE name = 'Healthcare'               AND icon IS NULL;
+UPDATE categories SET icon = 'pill'                WHERE name = 'Medicine'                 AND icon IS NULL;
+UPDATE categories SET icon = 'baby'                WHERE name = 'Children'                 AND icon IS NULL;
+UPDATE categories SET icon = 'piggy-bank'          WHERE name = 'Stipend / Pocket Money'   AND icon IS NULL;
+UPDATE categories SET icon = 'hand-heart'          WHERE name = 'Child Care'               AND icon IS NULL;
+UPDATE categories SET icon = 'graduation-cap'      WHERE name = 'School Fees'              AND icon IS NULL;
+UPDATE categories SET icon = 'book-open'           WHERE name = 'School Supplies'          AND icon IS NULL;
+UPDATE categories SET icon = 'dumbbell'            WHERE name = 'Sports'                   AND icon IS NULL;
+UPDATE categories SET icon = 'trophy'              WHERE name = 'Sports Equipment'         AND icon IS NULL;
+UPDATE categories SET icon = 'gift'                WHERE name = 'Giving'                   AND icon IS NULL;
+UPDATE categories SET icon = 'church'              WHERE name = 'EBC Giving'               AND icon IS NULL;
+UPDATE categories SET icon = 'landmark'            WHERE name = 'Loans'                    AND icon IS NULL;
+UPDATE categories SET icon = 'banknote'            WHERE name = 'Qona Loan Repayment'      AND icon IS NULL;
+UPDATE categories SET icon = 'receipt'             WHERE name = 'Stima Loan Repayment'     AND icon IS NULL;
+UPDATE categories SET icon = 'hand-coins'          WHERE name = 'Lending'                  AND icon IS NULL;
+UPDATE categories SET icon = 'trending-up'         WHERE name = 'Investment'               AND icon IS NULL;
+UPDATE categories SET icon = 'file-text'           WHERE name = 'Treasury Bills'           AND icon IS NULL;
+UPDATE categories SET icon = 'briefcase'           WHERE name = 'Salary'                   AND icon IS NULL;
+UPDATE categories SET icon = 'coins'               WHERE name = 'Side Income'              AND icon IS NULL;
+UPDATE categories SET icon = 'circle-dollar-sign'  WHERE name = 'Dividends'                AND icon IS NULL;
+UPDATE categories SET icon = 'building'            WHERE name = 'RS 4 Rental Income'       AND icon IS NULL;
+UPDATE categories SET icon = 'percent'             WHERE name = 'Interest Earned'          AND icon IS NULL;
+UPDATE categories SET icon = 'wallet'              WHERE name = 'Other Income'             AND icon IS NULL;
+UPDATE categories SET icon = 'circle-dot'          WHERE name = 'Other'                    AND icon IS NULL;
+
+-- 2. Replace seed function with updated version (new categories + icons)
 CREATE OR REPLACE FUNCTION seed_default_categories(p_household_id UUID)
 RETURNS VOID AS $$
 DECLARE

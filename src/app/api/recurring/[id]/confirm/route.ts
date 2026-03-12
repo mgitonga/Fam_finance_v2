@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         is_recurring: true,
         recurring_id: rule.id,
       })
-      .select('*, categories(name, color), accounts!transactions_account_id_fkey(name)')
+      .select('*, categories(name, color, icon), accounts!transactions_account_id_fkey(name)')
       .single();
 
     if (txnError) {

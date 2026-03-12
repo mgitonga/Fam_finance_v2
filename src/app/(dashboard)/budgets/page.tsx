@@ -27,6 +27,7 @@ import {
   X,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
+import { DynamicIcon } from '@/components/ui/dynamic-icon';
 
 type SubCategorySpending = {
   id: string;
@@ -42,7 +43,7 @@ type BudgetWithSpending = {
   spent: number;
   direct_spent: number;
   sub_category_breakdown: SubCategorySpending[];
-  categories: { name: string; color: string | null; type: string } | null;
+  categories: { name: string; color: string | null; icon: string | null; type: string } | null;
 };
 
 type CategoryWithChildren = {
@@ -405,7 +406,13 @@ export default function BudgetsPage() {
                   /* Inline edit mode */
                   <div className="flex items-center gap-2">
                     <span className="flex-1 font-medium">
-                      {budget.categories?.name || 'Unknown'}
+                      <span className="inline-flex items-center gap-1.5">
+                        <DynamicIcon
+                          name={budget.categories?.icon}
+                          className="h-4 w-4 text-gray-500 dark:text-gray-400"
+                        />
+                        {budget.categories?.name || 'Unknown'}
+                      </span>
                     </span>
                     <input
                       type="number"
@@ -463,6 +470,7 @@ export default function BudgetsPage() {
                       <BudgetProgress
                         categoryName={budget.categories?.name || 'Unknown'}
                         categoryColor={budget.categories?.color}
+                        categoryIcon={budget.categories?.icon}
                         spent={budget.spent}
                         budget={Number(budget.amount)}
                       />

@@ -12,6 +12,7 @@ import { useBills, useCreateBill, useDeleteBill } from '@/hooks/use-bills';
 import { useCategories } from '@/hooks/use-categories';
 import { formatKES } from '@/lib/utils';
 import { Loader2, Plus, Trash2, Bell, Clock } from 'lucide-react';
+import { DynamicIcon } from '@/components/ui/dynamic-icon';
 import { Modal } from '@/components/ui/modal';
 
 type Bill = {
@@ -21,7 +22,7 @@ type Bill = {
   due_day: number;
   reminder_days_before: number;
   notification_method: string;
-  categories: { name: string; color: string | null } | null;
+  categories: { name: string; color: string | null; icon: string | null } | null;
 };
 
 type Category = {
@@ -230,7 +231,16 @@ export default function BillsPage() {
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" /> Due day {bill.due_day}
                     </span>
-                    {bill.categories && <span>• {bill.categories.name}</span>}
+                    {bill.categories && (
+                      <span className="flex items-center gap-1">
+                        •
+                        <DynamicIcon
+                          name={bill.categories.icon}
+                          className="h-3 w-3 text-gray-400"
+                        />
+                        {bill.categories.name}
+                      </span>
+                    )}
                     <span>• Remind {bill.reminder_days_before}d before</span>
                   </div>
                 </div>

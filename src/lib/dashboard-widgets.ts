@@ -89,6 +89,24 @@ export const DASHBOARD_WIDGETS = [
     defaultEnabled: true,
     fullWidth: false,
   },
+  {
+    id: 'net-worth-summary',
+    label: 'Net Worth',
+    description: 'Current net worth with asset, account, and debt breakdown',
+    icon: 'TrendingUp',
+    defaultOrder: 10,
+    defaultEnabled: true,
+    fullWidth: false,
+  },
+  {
+    id: 'asset-overview',
+    label: 'Asset Overview',
+    description: 'Total asset value and top assets',
+    icon: 'Building2',
+    defaultOrder: 11,
+    defaultEnabled: true,
+    fullWidth: false,
+  },
 ] as const;
 
 export type WidgetId = (typeof DASHBOARD_WIDGETS)[number]['id'];

@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
       debtsRes,
       recentTxnRes,
       categoriesRes,
+      assetsRes,
     ] = await Promise.all([
       // All transactions for the month
       supabase
@@ -91,6 +92,12 @@ export async function GET(request: NextRequest) {
       supabase
         .from('categories')
         .select('id, name, color, parent_id')
+        .eq('household_id', hid)
+        .eq('is_active', true),
+      // Assets
+      supabase
+        .from('assets')
+        .select('id, name, type, current_value, purchase_price')
         .eq('household_id', hid)
         .eq('is_active', true),
     ]);
@@ -175,6 +182,11 @@ export async function GET(request: NextRequest) {
       0,
     );
 
+    // Asset summary
+    const assetsList = assetsRes.data || [];
+    const totalAssets = assetsList.reduce((sum, a) => sum + Number(a.current_value), 0);
+    const totalAccounts = accounts.reduce((sum, a) => sum + Number(a.balance), 0);
+
     return NextResponse.json({
       data: {
         metrics: {
@@ -185,6 +197,8 @@ export async function GET(request: NextRequest) {
           budgetRemaining,
           totalDebt,
           totalMonthlyDebt,
+          totalAssets,
+          totalAccounts,
         },
         budgetVsActual,
         incomeVsExpense: { income: totalIncome, expense: totalExpenses },
@@ -193,6 +207,7 @@ export async function GET(request: NextRequest) {
         savingsGoals: savingsRes.data || [],
         accounts,
         debts: debtsRes.data || [],
+        assets: assetsList,
         month,
         year,
       },

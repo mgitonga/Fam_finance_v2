@@ -299,7 +299,38 @@ export default function ReportsPage() {
         {activeTab === 'networth' && (
           <div>
             <h3 className="mb-4 text-lg font-semibold">Net Worth Over Time</h3>
+            <p className="mb-4 text-sm text-gray-500">
+              Net Worth = Assets + Account Balances − Debts
+            </p>
             {nwLoading ? <Loading /> : <NetWorthChart data={netWorthData || []} />}
+            {netWorthData && netWorthData.length > 0 && (
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
+                <div className="rounded-md bg-gray-50 p-3 dark:bg-gray-800">
+                  <p className="text-xs text-gray-500">Net Worth</p>
+                  <p className="text-lg font-bold">
+                    {formatKES(netWorthData[netWorthData.length - 1]?.netWorth ?? 0)}
+                  </p>
+                </div>
+                <div className="rounded-md bg-gray-50 p-3 dark:bg-gray-800">
+                  <p className="text-xs text-gray-500">Assets</p>
+                  <p className="text-lg font-bold text-green-600">
+                    {formatKES(netWorthData[netWorthData.length - 1]?.assets ?? 0)}
+                  </p>
+                </div>
+                <div className="rounded-md bg-gray-50 p-3 dark:bg-gray-800">
+                  <p className="text-xs text-gray-500">Accounts</p>
+                  <p className="text-lg font-bold text-blue-600">
+                    {formatKES(netWorthData[netWorthData.length - 1]?.accounts ?? 0)}
+                  </p>
+                </div>
+                <div className="rounded-md bg-gray-50 p-3 dark:bg-gray-800">
+                  <p className="text-xs text-gray-500">Debts</p>
+                  <p className="text-lg font-bold text-red-600">
+                    -{formatKES(netWorthData[netWorthData.length - 1]?.debts ?? 0)}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

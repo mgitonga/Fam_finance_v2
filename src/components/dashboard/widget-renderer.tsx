@@ -10,6 +10,8 @@ import { BudgetProgress } from '@/components/dashboard/budget-progress';
 import { IncomeVsExpenseChart } from '@/components/charts/income-vs-expense';
 import { BudgetVsActualChart } from '@/components/charts/budget-vs-actual';
 import { DebtOverviewWidget } from '@/components/dashboard/debt-overview';
+import { NetWorthWidget } from '@/components/widgets/net-worth-widget';
+import { AssetOverviewWidget } from '@/components/widgets/asset-overview-widget';
 import { DASHBOARD_WIDGETS, getDefaultPreferences } from '@/lib/dashboard-widgets';
 import type { WidgetId } from '@/lib/dashboard-widgets';
 import type { DashboardPreferences } from '@/lib/validations/dashboard';
@@ -25,6 +27,8 @@ interface WidgetRendererProps {
     overallBudget?: number | null;
     totalDebt?: number;
     totalMonthlyDebt?: number;
+    totalAssets?: number;
+    totalAccounts?: number;
   };
   preferences: DashboardPreferences | null;
 }
@@ -122,6 +126,20 @@ function renderWidget(id: WidgetId, data: any, metrics: WidgetRendererProps['met
           totalDebt={metrics.totalDebt ?? 0}
           totalMonthlyDebt={metrics.totalMonthlyDebt ?? 0}
         />
+      );
+
+    case 'net-worth-summary':
+      return (
+        <NetWorthWidget
+          totalAssets={metrics.totalAssets ?? 0}
+          totalAccounts={metrics.totalAccounts ?? 0}
+          totalDebts={metrics.totalDebt ?? 0}
+        />
+      );
+
+    case 'asset-overview':
+      return (
+        <AssetOverviewWidget assets={data?.assets || []} totalValue={metrics.totalAssets ?? 0} />
       );
 
     default:

@@ -46,6 +46,110 @@ export type Database = {
           },
         ];
       };
+      assets: {
+        Row: {
+          id: string;
+          household_id: string;
+          name: string;
+          classification: string;
+          type: string;
+          purchase_price: number;
+          current_value: number;
+          purchase_date: string;
+          description: string | null;
+          is_active: boolean;
+          disposed_at: string | null;
+          disposal_amount: number | null;
+          disposal_transaction_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          household_id: string;
+          name: string;
+          classification: string;
+          type: string;
+          purchase_price: number;
+          current_value: number;
+          purchase_date: string;
+          description?: string | null;
+          is_active?: boolean;
+          disposed_at?: string | null;
+          disposal_amount?: number | null;
+          disposal_transaction_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          household_id?: string;
+          name?: string;
+          classification?: string;
+          type?: string;
+          purchase_price?: number;
+          current_value?: number;
+          purchase_date?: string;
+          description?: string | null;
+          is_active?: boolean;
+          disposed_at?: string | null;
+          disposal_amount?: number | null;
+          disposal_transaction_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'assets_household_id_fkey';
+            columns: ['household_id'];
+            isOneToOne: false;
+            referencedRelation: 'households';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'assets_disposal_transaction_id_fkey';
+            columns: ['disposal_transaction_id'];
+            isOneToOne: false;
+            referencedRelation: 'transactions';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      asset_valuations: {
+        Row: {
+          id: string;
+          asset_id: string;
+          value: number;
+          date: string;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          asset_id: string;
+          value: number;
+          date: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          asset_id?: string;
+          value?: number;
+          date?: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'asset_valuations_asset_id_fkey';
+            columns: ['asset_id'];
+            isOneToOne: false;
+            referencedRelation: 'assets';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       dashboard_preferences: {
         Row: {
           user_id: string;
